@@ -16,7 +16,7 @@ spec:
       - name: yolo-container
         image: python:3.10
         command: ["/bin/bash"]
-        args: ["-c", "git clone https://github.com/LahmerMohammed/bmv2-loadbalancer.git && sleep infinity"]
+        args: ["-c", "git clone https://github.com/LahmerMohammed/bmv2-loadbalancer.git && cd bmv2-loadbalancer && chmod +x ./run.sh && ./run.sh && sleep infinity"]
         ports:
         - containerPort: 55555
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-sudo apt update > /dev/null
-sudo apt install python3-pip python3-venv 
+apt update > /dev/null
+apt install python3-pip python3-venv libglvnd-dev mesa-utils -y
 
 
 python3 -m venv venv
@@ -18,5 +18,5 @@ fi
 
 
 
-uvicorn main:app --reload --port 55555
+uvicorn main:app --reload --port 55555 &
 
