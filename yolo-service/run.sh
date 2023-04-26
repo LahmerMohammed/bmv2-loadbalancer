@@ -16,7 +16,5 @@ else
   wget https://pjreddie.com/media/files/yolov3.weights
 fi
 
-
-
-uvicorn main:app --reload --host 0.0.0.0 --port 55555 &
+uvicorn main:app --reload --host 0.0.0.0 --port 8000 &
 
