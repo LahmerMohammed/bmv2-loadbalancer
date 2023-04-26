@@ -7,9 +7,6 @@ import io
 import cv2
 import cvlib as cv
 
-from model import predict, Model
-
-
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
 
