@@ -18,5 +18,5 @@ fi
 
 
 
-uvicorn main:app --reload --port 55555 &
+uvicorn main:app --reload --host 0.0.0.0 --port 55555 &
 
