@@ -27,7 +27,9 @@ def home():
 
 @app.post('/predict')
 async def predict(model: Model, image: UploadFile):
+    print(image.filename)
 
+    """
     file_content = await image.read()
     pil_image = Image.open(io.BytesIO(file_content))
     numpy_image = np.array(pil_image)
@@ -37,5 +39,5 @@ async def predict(model: Model, image: UploadFile):
     response = cv.detect_common_objects(opencv_image, model=model)
 
     return response
-
+    """
 
