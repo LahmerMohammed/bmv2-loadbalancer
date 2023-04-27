@@ -33,24 +33,16 @@ async def predict(model: Model, image: UploadFile = File(...)):
     fileExtension = filename.split(".")[-1] in ("jpg", "jpeg", "png")
     if not fileExtension:
         raise HTTPException(status_code=415, detail="Unsupported file provided.")
-    # 2. TRANSFORM RAW IMAGE INTO CV2 image
 
-    # Read image as a stream of bytes
-    image_stream = io.BytesIO(image.file.read())
+    file_content = await image.read()
 
-    # Start the stream from the beginning (position zero)
-    image_stream.seek(0)
+    pil_image = Image.open(io.BytesIO(file_content))
 
-    # Write the stream of bytes into a numpy array
-    file_bytes = np.asarray(bytearray(image_stream.read()), dtype=np.uint8)
+    numpy_image = np.array(pil_image)
 
-    # Decode the numpy array as an image
-    image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+    opencv_image = cv2.cvtColor(numpy_image, cv2.COLOR_RGB2BGR)
 
-    # 3. RUN OBJECT DETECTION MODEL
-
-    # Run object detection
-    results = cv.detect_common_objects(image, model=model)
+    results = cv.detect_common_objects(opencv_image, model=model)
 
     return JSONResponse(content=results)
 
