@@ -27,17 +27,12 @@ def home():
 
 @app.post('/predict')
 async def predict(model: Model, image: UploadFile):
-    print(image.filename)
-
-    """
+    
     file_content = await image.read()
     pil_image = Image.open(io.BytesIO(file_content))
     numpy_image = np.array(pil_image)
     opencv_image = cv2.cvtColor(numpy_image, cv2.COLOR_RGB2BGR)
     
-
     response = cv.detect_common_objects(opencv_image, model=model)
-
     return response
-    """
 
