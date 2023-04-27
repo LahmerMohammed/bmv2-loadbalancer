@@ -26,18 +26,16 @@ def home():
 
 
 @app.post('/predict')
-async def predict(model: Model, image: UploadFile = File(...)):
+async def predict(model: Model, image: UploadFile):
 
-    # 1. VALIDATE INPUT FILE
-    filename = image.filename
-    fileExtension = filename.split(".")[-1] in ("jpg", "jpeg", "png")
-    if not fileExtension:
-        raise HTTPException(status_code=415, detail="Unsupported file provided.")
+    file_content = await image.read()
+    pil_image = Image.open(io.BytesIO(file_content))
+    numpy_image = np.array(pil_image)
+    opencv_image = cv2.cvtColor(numpy_image, cv2.COLOR_RGB2BGR)
+    
 
-    contents = await image.read()
-    nparr = np.frombuffer(contents, np.uint8)
-    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-    bbox, label, conf = cv.detect_common_objects(img, model=model)
-    return {"bbox": bbox, "label": label, "conf": conf}
+    response = cv.detect_common_objects(opencv_image, model=model)
+
+    return response
 
 
