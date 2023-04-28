@@ -54,7 +54,7 @@ bmv2:
     	--device-id 0 \
     	--thrift-port 9090 \
     	--log-file bmv2.log \
-    	--nanolog ipc:///tmp/bm-log.ipc  &
+    	--nanolog ipc:///tmp/bm-log.ipc &
 
 install:
 	echo "deb https://download.opensuse.org/repositories/home:/p4lang/${OS_RELEASE}_${VERSION_ID}/ /" | sudo tee /etc/apt/sources.list.d/home:p4lang.list

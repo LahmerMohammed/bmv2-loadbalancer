@@ -85,6 +85,13 @@ def printGrpcError(e):
 def receivePacketFromDataPlane(bmv2_sw: Bmv2SwitchConnection):
     for response in bmv2_sw.stream_msg_resp:
         pass
+
+
+def packet_in(bmv2_sw: Bmv2SwitchConnection):
+    print('[✅] Waiting to receive packets from dataplane ...')
+    for response in bmv2_sw.stream_msg_resp:
+        print('[✅] A message has been received')
+        print(response)
     
 def main(p4i_file_path, bmv2_json_file_path):
 
@@ -110,7 +117,7 @@ def main(p4i_file_path, bmv2_json_file_path):
 
         readTableRules(p4i_helper, bmv2_sw)
 
-        bmv2_sw.channel.stream_stream()
+        receivePacketFromDataPlane(bmv2_sw=bmv2_sw)
 
     except KeyboardInterrupt:
         print("[!] Shutting down.")
