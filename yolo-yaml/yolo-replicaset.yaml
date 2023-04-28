@@ -1,9 +1,24 @@
 apiVersion: apps/v1
 kind: ReplicaSet
 metadata:
-  name: yolo-rs
+  name: yolo-replicaset
 spec:
-  replicas: 3
+  replicas: 2
   selector:
     matchLabels:
       name: yolo
+  template:
+    metadata:
+      labels:
+        name: yolo
+    spec:
+      containers:
+      - name: yolo-container
+        image: python:3.10
+        args: 
+        - "/bin/bash"
+        - "-c"
+        - "git clone https://github.com/LahmerMohammed/bmv2-loadbalancer.git && cd bmv2-loadbalancer/yolo-service && chmod +x ./run.sh && ./run.sh && sleep infinity"
+        ports:
+        - containerPort: 8000
+    
