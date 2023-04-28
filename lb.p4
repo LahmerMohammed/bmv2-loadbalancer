@@ -10,7 +10,11 @@ typedef bit<48> macAddr_t;
 typedef bit<32> ipv4Addr_t;
 
 
-header ethernet_t {
+#define CPU_PORT 510
+#define DROP_PORT 511
+
+
+header ethernet_t {// packet_out and packet_in are named here from the perspective of the
     macAddr_t dstAddr;
     macAddr_t srcAddr;
     bit<16>   etherType;
@@ -62,7 +66,46 @@ struct metadata {
     bit<16> l4Length;
 }
 
+// Note on the names of the controller_header header types:
+
+// packet_out and packet_in are named here from the perspective of the
+// controller, and that is how these messages are named in the
+// P4Runtime API specification as well.
+
+// Thus packet_out is a packet sent out of the controller to the
+// switch, which becomes a packet received by the switch on port
+// CPU_PORT.
+
+// A packet sent by the switch to port CPU_PORT becomes a PacketIn
+// message to the controller.
+
+// When running with simple_switch_grpc, you must provide the
+// following command line option to enable the ability for the
+// software switch to receive and send such messages:
+//
+//     --cpu-port 510
+//     --drop-port 511
+
+
+enum bit<1> Reason_t {
+    NO_RULE_MATCH   = 0
+};
+
+@controller_header("packet_in")
+header packet_in_t {
+    bit<9> ingress_port;
+    Reason_t reason;
+}
+
+@controller_header("packet_out")
+header packet_out_t {
+    bit<9> egress_port;
+}
+
+
 struct headers {
+    packet_in_header_t  packet_in;
+    packet_out_header_t packet_out;
     ethernet_t   ethernet;
     ipv4_t       ipv4;
     tcp_t        tcp;
@@ -174,6 +217,13 @@ control MyIngress(inout headers hdr,
         meta.ecmp_group_id = group_id;
     }
 
+    action send_to_controller() {
+        standard_metadata.egress_spec = CPU_PORT;
+        hdr.packet_in.setValid();
+        hdr.packet_in.reason = Reason_t.NO_RULE_MATCH;
+        hdr.packet_in.ingress_port = standard_metadata.ingress_port;
+    }
+
     table ecmp_group {
         key = {
             hdr.tcp.dstPort: exact;
@@ -194,9 +244,9 @@ control MyIngress(inout headers hdr,
         }
         actions = {
             snat_a;
-            drop;
+            send_to_controller;
         }
-        default_action = drop;
+        default_action = send_to_controller;
         size = 1024;
     }
 
@@ -324,6 +374,8 @@ control MyComputeChecksum(inout headers hdr, inout metadata meta) {
 control MyDeparser(packet_out packet, in headers hdr) {
     apply {
 
+        packet.emit(hdr.packet_in);
+        
         //parsed headers have to be added again into the packet.
         packet.emit(hdr.ethernet);
         packet.emit(hdr.ipv4);

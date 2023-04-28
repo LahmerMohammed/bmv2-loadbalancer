@@ -3,6 +3,11 @@ import cv2
 import numpy as np
 import json
 
+"""
+curl -X POST 'http://127.0.0.1:8000/predict?model=yolov3-tiny' --form 'image=@cars.jpg' -H  "accept: application/json"         
+
+"""
+
 url = "http://localhost:55555/predict"
 
 image = '/home/lahmer/Pictures/mohammed.jpg'
@@ -13,20 +18,11 @@ headers = {
     'accept': 'application/json'
 }
 
-classes = 'yolov3_classes.txt'
-weights = 'yolov3.weights'
-config = 'yolov3.cfg'
-
-COLORS = np.random.uniform(0, 255, size=(len(classes), 3))
-image = cv2.imread(image)
 
 with open(classes, 'r') as f:
     classes = [line.strip() for line in f.readlines()]
 
-def draw_prediction(img, class_id, confidence, x, y, x_plus_w, y_plus_h):
-    label = str(classes[class_id])
-
-    color = COLORS[class_id]
+def draw_prediction(img, label, confidence, bbox):
 
     cv2.rectangle(img, (x,y), (x_plus_w,y_plus_h), color, 2)
 
@@ -47,3 +43,11 @@ cv2.waitKey()
 cv2.imwrite("object-detection.jpg", image)
 cv2.destroyAllWindows()
 
+
+"""
+curl -X 'POST' \
+  'http://localhost:8000/predict?model=yolov3-tiny' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: multipart/form-data' \
+  -F 'image=@DSC_0820-new-3_104803.jpg;type=image/jpeg'
+"""

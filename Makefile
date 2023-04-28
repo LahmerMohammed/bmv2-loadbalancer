@@ -18,6 +18,9 @@ P4C=p4c
 P4C_ARGS += --target bmv2 --arch v1model --p4runtime-files ${BUILD_DIR}/lb.p4.p4info.txt
 
 
+CPU_PORT = 510
+DROP_PORT = 511
+
 compiled_json := $(DEFAULT_PROG:.p4=.json)
 
 #P4_VERSION=p4c 1.2.3.6 (SHA: ce01301 BUILD: RELEASE)
@@ -46,6 +49,8 @@ bmv2:
 	p4c --target bmv2 --arch v1model --std p4-16 lb.p4
 	sudo simple_switch lb.json -i 0@ens4 \
 		-i 1@ens5 \
+		--cpu-port ${CPU_PORT} \
+		--drop-port ${DROP_PORT} \
     	--device-id 0 \
     	--thrift-port 9090 \
     	--log-file bmv2.log \

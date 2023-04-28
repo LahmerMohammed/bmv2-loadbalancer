@@ -3,6 +3,9 @@ import sys
 import os
 import grpc
 from time import sleep
+from p4.tmp import p4config_pb2
+from p4.v1 import p4runtime_pb2, p4runtime_pb2_grpc
+
 
 
 sys.path.append(
@@ -13,20 +16,30 @@ from p4runtime_lib.helper import P4InfoHelper
 from p4runtime_lib.bmv2 import Bmv2SwitchConnection
 from p4runtime_lib.switch import ShutdownAllSwitchConnections
 
-P4RUNTIME_SERVER_PORT = 9559
-SWITCH_TO_USERS_PORT = 0
-SWITCH_TO_CLUSTER_PORT = 1
+
+BMV2_SWITCH={
+    'id': 0,
+    'server_addr': '127.0.0.1:9559',
+    'switch_to_users_if': {
+        'port': 0,
+        'mac': '42:01:0a:c8:00:04'
+    },
+    'switch_to_cluster_if': {
+        'port': 1,
+        'mac': '42:01:0a:c6:00:05'
+    },
+}
 
 def init_bmv2_tables(p4i_helper: P4InfoHelper, bmv2_sw: Bmv2SwitchConnection):
 
     table_entry = p4i_helper.buildTableEntry(
         table_name='MyEgress.send_frame',
         match_fields={
-            'standard_metadata.egress_spec': SWITCH_TO_USERS_PORT
+            'standard_metadata.egress_spec': BMV2_SWITCH["switch_to_users_if"]["port"]
         },
         action_name='MyEgress.rewrite_mac',
         action_params={
-            'smac': '42:01:0a:c8:00:04'
+            'smac': BMV2_SWITCH["switch_to_users_if"]["mac"]
         }
     )
 
@@ -35,11 +48,11 @@ def init_bmv2_tables(p4i_helper: P4InfoHelper, bmv2_sw: Bmv2SwitchConnection):
     table_entry = p4i_helper.buildTableEntry(
         table_name='MyEgress.send_frame',
         match_fields={
-            'standard_metadata.egress_spec': SWITCH_TO_CLUSTER_PORT
+            'standard_metadata.egress_spec': BMV2_SWITCH["switch_to_cluster_if"]["port"]
         },
         action_name='MyEgress.rewrite_mac',
         action_params={
-            'smac': '42:01:0a:c6:00:05'
+            'smac': BMV2_SWITCH["switch_to_cluster_if"]["mac"]
         }
     )
     
@@ -69,21 +82,22 @@ def printGrpcError(e):
     traceback = sys.exc_info()[2]
     print("[%s:%d]" % (traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
 
-
+def receivePacketFromDataPlane(bmv2_sw: Bmv2SwitchConnection):
+    for response in bmv2_sw.stream_msg_resp:
+        pass
+    
 def main(p4i_file_path, bmv2_json_file_path):
 
     p4i_helper = helper.P4InfoHelper(p4i_file_path)
 
     try:
         bmv2_sw = bmv2.Bmv2SwitchConnection(
-            name='loadbalancer',
-            address='127.0.0.1:{}'.format(P4RUNTIME_SERVER_PORT),
-            device_id=0,
+            address=BMV2_SWITCH['server_addr'],
+            device_id=BMV2_SWITCH['id'],
             proto_dump_file='logs/p4runtime-requests.txt',
         )
 
         bmv2_sw.MasterArbitrationUpdate()
-
 
         bmv2_sw.SetForwardingPipelineConfig(p4info=p4i_helper.p4info, 
                                             bmv2_json_file_path=bmv2_json_file_path)
@@ -95,6 +109,8 @@ def main(p4i_file_path, bmv2_json_file_path):
 
 
         readTableRules(p4i_helper, bmv2_sw)
+
+        bmv2_sw.channel.stream_stream()
 
     except KeyboardInterrupt:
         print("[!] Shutting down.")
