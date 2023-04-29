@@ -46,7 +46,7 @@ clean: stop
 
 #table_add MyIngress.ecmp_group set_ecmp_group 55555 => 55555 1
 #table_add MyIngress.snat_t snat_a 55555 1 => 10.198.0.2 42:01:0a:c6:00:01 10.198.0.5 30001 1 
-#table_add MyIngress.reverse_snat_t reverse_snat_a 30001 =>  41.102.236.58 30002 42:01:0a:c8:00:01 34.154.94.220 0
+#table_add MyIngress.reverse_snat_t reverse_snat_a 30001 =>  41.102.61.69 30002 42:01:0a:c8:00:01 34.154.94.220 0
 
 run-bmv2:
 	p4c --target bmv2 --arch v1model --std p4-16 lb.p4

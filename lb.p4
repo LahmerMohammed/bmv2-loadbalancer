@@ -87,19 +87,20 @@ struct metadata {
 //     --drop-port 511
 
 
-enum bit<1> Reason_t {
+enum bit<7> Reason_t {
     NO_RULE_MATCH   = 0
-};
+}
 
 @controller_header("packet_in")
-header packet_in_t {
+header packet_in_header_t {
     bit<9> ingress_port;
     Reason_t reason;
 }
 
 @controller_header("packet_out")
-header packet_out_t {
+header packet_out_header_t {
     bit<9> egress_port;
+    bit<7> padding_bits;
 }
 
 
