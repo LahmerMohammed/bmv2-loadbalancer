@@ -176,3 +176,8 @@ p4lb/bin/python3.10
 */venv
 
 */yolov3.weights
+.vscode/settings.json
+p4lb/bin/autopep8
+p4lb/bin/pycodestyle
+.vscode/settings.json
+.vscode/settings.json
