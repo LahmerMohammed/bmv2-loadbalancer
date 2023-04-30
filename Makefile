@@ -67,6 +67,7 @@ install:
 	python3 -m venv p4lb
 	source p4lb/bin/activate
 	pip3 install -r requirements.txt
+	pip3 install git+https://github.com/kaporzhu/protobuf-to-dict.git
 	git clone https://github.com/p4lang/tutorials
 	cd tutorials
 	git sparse-checkout set --no-cone utils

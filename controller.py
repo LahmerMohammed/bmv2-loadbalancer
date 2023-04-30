@@ -151,9 +151,6 @@ def printGrpcError(e):
     print("[%s:%d]" % (traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
 
 
-
-def decode_packet(packet):
-    hex_packet = binascii.hexlify(data).decode('utf-8')
 def packet_in(bmv2_sw: Bmv2SwitchConnection):
     print('[✅] Waiting to receive packets from dataplane ...')
     for response in bmv2_sw.stream_msg_resp:
