@@ -261,9 +261,11 @@ control MyIngress(inout headers hdr,
         if (hdr.ipv4.isValid() && hdr.ipv4.ttl > 0 && hdr.tcp.isValid()) {
 
             if (standard_metadata.ingress_port == 0) {
-                ecmp_group.apply();
-                snat_t.apply(); 
-            } 
+                switch(ecmp_group.apply().action_run) {
+                    set_ecmp_group: {
+                        snat_t.apply();
+                    } 
+                }           } 
             else {
                 reverse_snat_t.apply();  
             }
@@ -279,22 +281,18 @@ control MyIngress(inout headers hdr,
 control MyEgress(inout headers hdr,
                  inout metadata meta,
                  inout standard_metadata_t standard_metadata) {
-
-    action my_drop() {
-        mark_to_drop(standard_metadata);
-    }
+ 
     action rewrite_mac(macAddr_t smac) {
         hdr.ethernet.srcAddr = smac;
     }
+
     table send_frame {
         key = {
             standard_metadata.egress_spec: exact;
         }
         actions = {
             rewrite_mac;
-            my_drop;
         }
-        default_action = my_drop;
     }
 
     apply {

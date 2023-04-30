@@ -26,8 +26,17 @@ compiled_json := $(DEFAULT_PROG:.p4=.json)
 #P4_VERSION=p4c 1.2.3.6 (SHA: ce01301 BUILD: RELEASE)
 # simple switch version: 1.15.0-9f76fe9b
 
-run: build
-    sudo ${BMV2_SWITCH_EXE}  ${BMV2_SWITCH_EXE_ARGS} ${DEFAULT_JSON} &
+run-bmv2: build
+	sudo simple_switch_grpc \
+		-i 0@ens4 \
+		-i 1@ens5 \
+		--no-p4 \
+		--device-id 0 \
+    		--thrift-port 9090 \
+    		--log-file ${LOG_DIR}/bmv2.log \
+    		--nanolog ipc:///tmp/bm-log.ipc -- \
+		--cpu-port ${CPU_PORT} \
+		--drop-port ${DROP_PORT} &
 
 build: dirs $(compiled_json)
 
@@ -48,16 +57,6 @@ clean: stop
 #table_add MyIngress.snat_t snat_a 55555 1 => 10.198.0.2 42:01:0a:c6:00:01 10.198.0.5 30001 1 
 #table_add MyIngress.reverse_snat_t reverse_snat_a 30001 =>  41.102.61.69 30002 42:01:0a:c8:00:01 34.154.94.220 0
 
-run-bmv2:
-	p4c --target bmv2 --arch v1model --std p4-16 lb.p4
-	sudo simple_switch lb.json -i 0@ens4 \
-		-i 1@ens5 \
-		--cpu-port ${CPU_PORT} \
-		--drop-port ${DROP_PORT} \
-    	--device-id 0 \
-    	--thrift-port 9090 \
-    	--log-file bmv2.log \
-    	--nanolog ipc:///tmp/bm-log.ipc &
 
 install:
 	echo "deb https://download.opensuse.org/repositories/home:/p4lang/${OS_RELEASE}_${VERSION_ID}/ /" | sudo tee /etc/apt/sources.list.d/home:p4lang.list

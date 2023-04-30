@@ -4,7 +4,7 @@ import sys
 import os
 import grpc
 from time import sleep
-
+import binascii 
 
 
 sys.path.append(
@@ -16,7 +16,7 @@ from p4runtime_lib.helper import P4InfoHelper
 from p4runtime_lib import bmv2, helper
 from p4.tmp import p4config_pb2
 from p4.v1 import p4runtime_pb2, p4runtime_pb2_grpc
-
+from protobuf_to_dict import protobuf_to_dict, dict_to_protobuf
 
 BMV2_SWITCH = {
     'id': 0,
@@ -112,6 +112,7 @@ def add_reverse_snat_table_entry(p4i_helper: P4InfoHelper,
             'egress_port': entry["params"]["egress_port"],
         }
     )
+
     bmv2_sw.WriteTableEntry(table_entry=table_entry)
     
 
@@ -119,7 +120,7 @@ def init_bmv2_tables(p4i_helper: P4InfoHelper, bmv2_sw: Bmv2SwitchConnection):
 
     add_send_frame_table_entry(p4i_helper, bmv2_sw,
                                port=BMV2_SWITCH["users_interface"]["port"],
-                               mac_addr=BMV2_SWITCH["switch_to_users_if"]["mac"])
+                               mac_addr=BMV2_SWITCH["users_interface"]["mac"])
 
     for c_if in BMV2_SWITCH["cluster_interfaces"]:
         add_send_frame_table_entry(p4i_helper, bmv2_sw,
@@ -150,12 +151,16 @@ def printGrpcError(e):
     print("[%s:%d]" % (traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
 
 
+
+def decode_packet(packet):
+    hex_packet = binascii.hexlify(data).decode('utf-8')
 def packet_in(bmv2_sw: Bmv2SwitchConnection):
     print('[✅] Waiting to receive packets from dataplane ...')
     for response in bmv2_sw.stream_msg_resp:
         print('[✅] A message has been received')
-        print(response)
-
+        t = protobuf_to_dict(response)
+        print(type(t))
+        print(t)
 
 def main(p4i_file_path, bmv2_json_file_path):
 
@@ -175,10 +180,24 @@ def main(p4i_file_path, bmv2_json_file_path):
         print(
             "[✅] Installed loadbalancer P4 Program using SetForwardingPipelineConfig on the switch.")
 
-        init_bmv2_tables(p4i_helper, bmv2_sw)
-        print("[✅] BMv2 switch tables were intialized successfully.")
+        #init_bmv2_tables(p4i_helper, bmv2_sw)
+        #print("[✅] BMv2 switch tables were intialized successfully.")
 
-        readTableRules(p4i_helper, bmv2_sw)
+        #readTableRules(p4i_helper, bmv2_sw)
+        
+
+        table_entry = p4i_helper.buildTableEntry(
+            table_name='MyIngress.ecmp_group',
+            match_fields={
+                'hdr.tcp.dstPort': 55555,
+            },
+            action_name='MyIngress.set_ecmp_group',
+            action_params={
+                'group_id': 55555,
+                'number_of_ecmp_path': 1,
+            }
+        )
+        bmv2_sw.WriteTableEntry(table_entry=table_entry)
 
         packet_in(bmv2_sw=bmv2_sw)
 
