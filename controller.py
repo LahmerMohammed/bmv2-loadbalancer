@@ -18,6 +18,8 @@ from p4.tmp import p4config_pb2
 from p4.v1 import p4runtime_pb2, p4runtime_pb2_grpc
 from protobuf_to_dict import protobuf_to_dict, dict_to_protobuf
 
+
+
 BMV2_SWITCH = {
     'id': 0,
     'server_addr': '127.0.0.1:9559',
@@ -34,6 +36,9 @@ BMV2_SWITCH = {
     'p4i_file_path': './build/lb.p4.p4info.txt',
     'json_file_path': './build/lb.json',
 }
+
+
+
 
 
 def add_send_frame_table_entry(p4i_helper: P4InfoHelper,
@@ -151,13 +156,35 @@ def printGrpcError(e):
     print("[%s:%d]" % (traceback.tb_frame.f_code.co_filename, traceback.tb_lineno))
 
 
-def packet_in(bmv2_sw: Bmv2SwitchConnection):
+def packet_in(p4i_helper, bmv2_sw: Bmv2SwitchConnection):
     print('[✅] Waiting to receive packets from dataplane ...')
     for response in bmv2_sw.stream_msg_resp:
-        print('[✅] A message has been received')
         t = protobuf_to_dict(response)
-        print(type(t))
         print(t)
+        snat_entry = {
+            'match': { 'group_id': 0, 'path_id': 1 },
+            'params': {
+                'dstIpAddr': '',
+                'dstMacAddr': '',
+                'srcIpAddr': '',
+                'srcPort': '',
+                'egress_port': 1
+            }
+        }
+        #add_snat_table_entry(p4i_helper, bmv2_sw, snat_entry)
+
+        reverse_snat_entry = {
+            'match': { 'hdr.tcp.dstPort': 55555 },
+            'params': {
+                'dstIpAddr': '',
+                'dstPort': 0,
+                'dstMacAddr': '',
+                'srcIpAddr': '',
+                'egress_port': 0
+            }
+        }
+
+        #add_reverse_snat_table_entry(p4i_helper, bmv2_sw, reverse_snat_entry)
 
 def main(p4i_file_path, bmv2_json_file_path):
 
@@ -196,7 +223,7 @@ def main(p4i_file_path, bmv2_json_file_path):
         )
         bmv2_sw.WriteTableEntry(table_entry=table_entry)
 
-        packet_in(bmv2_sw=bmv2_sw)
+        packet_in(p4i_helper, bmv2_sw)
 
     except KeyboardInterrupt:
         print("[!] Shutting down.")
