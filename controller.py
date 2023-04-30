@@ -53,6 +53,68 @@ def add_send_frame_table_entry(p4i_helper: P4InfoHelper,
     bmv2_sw.WriteTableEntry(table_entry=table_entry)
 
 
+def add_ecmp_table_entry(p4i_helper: P4InfoHelper,
+                         bmv2_sw: Bmv2SwitchConnection,
+                         port: int, group_id: int,
+                         number_of_ecmp_path: int 
+                        ):
+    table_entry = p4i_helper.buildTableEntry(
+        table_name='MyIngress.ecmp_group',
+        match_fields={
+            'hdr.tcp.dstPort': port
+        },
+        action_name='MyIngress.set_ecmp_group',
+        action_params={
+            'group_id': group_id,
+            'number_of_ecmp_path': number_of_ecmp_path
+        }
+    )
+    bmv2_sw.WriteTableEntry(table_entry=table_entry)
+
+
+def add_snat_table_entry(p4i_helper: P4InfoHelper,
+                        bmv2_sw: Bmv2SwitchConnection,
+                        entry: dict
+                        ):
+    table_entry = p4i_helper.buildTableEntry(
+        table_name='MyIngress.snat_t',
+        match_fields={
+            'meta.ecmp_group_id': entry["match"]["group_id"],
+            'meta.ecmp_path_id': entry["match"]["path_id"]
+        },
+        action_name='MyIngress.snat_a',
+        action_params={
+            'dstIpAddr': entry["params"]["dstIpAddr"],
+            'dstMacAddr': entry["params"]["dstMacAddr"],
+            'srcIpAddr': entry["params"]["srcIpAddr"],
+            'srcPort': entry["params"]["srcPort"],
+            'egress_port': entry["params"]["egress_port"],
+        }
+    )
+    bmv2_sw.WriteTableEntry(table_entry=table_entry)
+
+
+def add_reverse_snat_table_entry(p4i_helper: P4InfoHelper,
+                        bmv2_sw: Bmv2SwitchConnection,
+                        entry: dict
+                        ):
+    table_entry = p4i_helper.buildTableEntry(
+        table_name='MyIngress.reverse_snat_t',
+        match_fields={
+            'hdr.tcp.dstPort': entry["match"]["tcpDstPort"],
+        },
+        action_name='MyIngress.reverse_snat_a',
+        action_params={
+            'dstIpAddr': entry["params"]["dstIpAddr"],
+            'dstPort': entry["params"]["dstPort"],
+            'dstMacAddr': entry["params"]["dstMacAddr"],
+            'srcIpAddr': entry["params"]["srcIpAddr"],
+            'egress_port': entry["params"]["egress_port"],
+        }
+    )
+    bmv2_sw.WriteTableEntry(table_entry=table_entry)
+    
+
 def init_bmv2_tables(p4i_helper: P4InfoHelper, bmv2_sw: Bmv2SwitchConnection):
 
     add_send_frame_table_entry(p4i_helper, bmv2_sw,
