@@ -4,7 +4,8 @@ import sys
 import os
 import grpc
 from time import sleep
-import binascii 
+from scapy.layers.l2 import Ether
+
 
 
 sys.path.append(
@@ -160,30 +161,32 @@ def packet_in(p4i_helper, bmv2_sw: Bmv2SwitchConnection):
     print('[✅] Waiting to receive packets from dataplane ...')
     for response in bmv2_sw.stream_msg_resp:
         t = protobuf_to_dict(response)
-        print(t)
+        
+        ether = Ether(t["packet"]["payload"])
+
         snat_entry = {
-            'match': { 'group_id': 0, 'path_id': 1 },
+            'match': { 'group_id': 55555, 'path_id': 1 },
             'params': {
-                'dstIpAddr': '',
-                'dstMacAddr': '',
-                'srcIpAddr': '',
-                'srcPort': '',
+                'dstIpAddr': '10.198.0.2', # service ip addr
+                'dstMacAddr': '42:01:0a:c6:00:01', # gateway mac addr
+                'srcIpAddr': '10.198.0.5',
+                'srcPort': '30001', # update 
                 'egress_port': 1
             }
         }
         #add_snat_table_entry(p4i_helper, bmv2_sw, snat_entry)
-
+        print(snat_entry)
         reverse_snat_entry = {
-            'match': { 'hdr.tcp.dstPort': 55555 },
+            'match': { 'hdr.tcp.dstPort': '30001' }, # match srcPort in snat action
             'params': {
-                'dstIpAddr': '',
-                'dstPort': 0,
-                'dstMacAddr': '',
-                'srcIpAddr': '',
+                'dstIpAddr': ether.payload.src,
+                'dstPort': ether.payload.payload.sport,
+                'dstMacAddr': '42:01:0a:c8:00:01',
+                'srcIpAddr': '34.154.94.220',
                 'egress_port': 0
             }
         }
-
+        print(reverse_snat_entry)
         #add_reverse_snat_table_entry(p4i_helper, bmv2_sw, reverse_snat_entry)
 
 def main(p4i_file_path, bmv2_json_file_path):
