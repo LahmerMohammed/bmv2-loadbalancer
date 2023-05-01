@@ -2,7 +2,7 @@
 
 import socket
 
-HOST = '34.154.94.220'  # The server's hostname or IP address
+HOST = '34.154.46.11'  # The server's hostname or IP address
 #HOST='34.154.94.220'
 PORT = 55555      # The port used by the server
 CLIENT_PORT = 30002 # The port used by the client
