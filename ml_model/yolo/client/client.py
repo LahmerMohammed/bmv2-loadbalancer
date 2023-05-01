@@ -1,8 +1,8 @@
 import requests
 import cv2
 from cvlib.object_detection import draw_bbox
-from main import Model
 import argparse
+from ml_model.yolo import Model
 
 
 def predict_and_draw_bbox(image_name: str, model: Model = 'yolov3-tiny'):
