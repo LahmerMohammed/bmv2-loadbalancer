@@ -8,7 +8,7 @@ from p4runtime_lib.helper import P4InfoHelper
 from p4runtime_lib import bmv2, helper
 from protobuf_to_dict import protobuf_to_dict
 import grpc
-from scapy.layers.l2 import Ether
+from scapy.all import *
 
 
 class Controller:
@@ -30,6 +30,8 @@ class Controller:
 
             print(
                 "[✅] Installed loadbalancer P4 Program using SetForwardingPipelineConfig on the switch.")
+
+            self.add_ecmp_table_entry(port=55555, group_id=55555, number_of_ecmp_path=1)
 
         except grpc.RpcError as e:
             printGrpcError(e)
@@ -122,21 +124,26 @@ class Controller:
             ether = Ether(result["packet"]["payload"])
             packet = ether.payload
             datagram = packet.payload
-
+            print(type(packet))
+            print(packet.src)
+            print(datagram.sport)
+            
             snat_entry = {
-                'match': {'group_id': services[0]['port'], 'path_id': services[0]['id']},
+                'match': {'group_id': 55555, 'path_id': 1},
                 'params': {
                     # service ip addr
-                    'dstIpAddr': services[0]['servers'][0]['ip'],
+                    'dstIpAddr': 'service_ip',
                     # gateway mac addr
                     'dstMacAddr': BMV2_SWITCH['gateway_interface']['mac'],
                     'srcIpAddr': BMV2_SWITCH['cluster_interfaces'][0]['private_ip'],
-                    'srcPort': '30001',  #
+                    'srcPort': 30001,  #
                     'egress_port': services[0]['servers'][0]['port']
                 }
             }
+            
             # add_snat_table_entry(p4i_helper, bmv2_sw, snat_entry)
             print(snat_entry)
+            
             reverse_snat_entry = {
                 # must
                 # match srcPort in snat action
@@ -150,6 +157,7 @@ class Controller:
                 }
             }
             print(reverse_snat_entry)
+        
             # add_reverse_snat_table_entry(p4i_helper, bmv2_sw, reverse_snat_entry)
 
 
