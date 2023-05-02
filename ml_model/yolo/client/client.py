@@ -35,7 +35,7 @@ if __name__ == '__main__':
         description='Object detection using YOLOv3')
 
     # Add the arguments
-    parser.add_argument('--image', type=str, help='path to the image file')
+    parser.add_argument('--image', type=str, help='path to the image file', required=True)
     parser.add_argument('--model', type=Model,  choices=[model.value for model in list(
         Model)], help='name of the YOLOv3-tiny model', default='yolov3-tiny')
 
