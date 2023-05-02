@@ -2,7 +2,13 @@ import requests
 import cv2
 from cvlib.object_detection import draw_bbox
 import argparse
-from ml_model.yolo import Model
+from enum import Enum
+
+
+# List available models using Enum for convenience. This is useful when the options are pre-defined.
+class Model(str, Enum):
+    yolov3tiny = "yolov3-tiny"
+    yolov3 = "yolov3"   
 
 
 def predict_and_draw_bbox(image_name: str, model: Model = 'yolov3-tiny'):

@@ -1,14 +1,23 @@
 
+import os, sys
+sys.path.append('../../yolo')
+
+
 from PIL import Image
 import numpy as np
 import io
 import cv2
 import cvlib as cv
 from fastapi import FastAPI, UploadFile, HTTPException
-from ml_model.yolo import Model
+from enum import Enum
+
+
+# List available models using Enum for convenience. This is useful when the options are pre-defined.
+class Model(str, Enum):
+    yolov3tiny = "yolov3-tiny"
+    yolov3 = "yolov3"   
 
 app = FastAPI(title='Deploying a ML Model with FastAPI')
-
 
 @app.get("/")
 def home():
