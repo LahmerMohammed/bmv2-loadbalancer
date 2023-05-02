@@ -11,20 +11,6 @@ import grpc
 from scapy.layers.l2 import Ether
 
 
-def readTableRules(p4info_helper: P4InfoHelper, bmv2_sw: Bmv2SwitchConnection):
-    """
-    Reads the table entries from all tables on the switch.
-    :param p4info_helper: the P4Info helper
-    :param sw: the switch connection
-    """
-    print('\n----- Reading tables rules for %s -----' % bmv2_sw.name)
-    for response in bmv2_sw.ReadTableEntries():
-        for entity in response.entities:
-            entry = entity.table_entry
-            table_name = p4info_helper.get_tables_name(entry.table_id)
-            print('%s: ' % table_name, end=' ')
-            print()
-
 class Controller:
     def __init__(self, p4i_file_path=BMV2_SWITCH['p4i_file_path'], bmv2_json_file_path=BMV2_SWITCH['json_file_path']) -> None:
 
@@ -44,13 +30,9 @@ class Controller:
 
             print(
                 "[✅] Installed loadbalancer P4 Program using SetForwardingPipelineConfig on the switch.")
-        except KeyboardInterrupt:
-            print("[!] Shutting down.")
 
         except grpc.RpcError as e:
             printGrpcError(e)
-
-        ShutdownAllSwitchConnections()
 
 
     def add_default_entries(self):
@@ -170,6 +152,6 @@ class Controller:
             print(reverse_snat_entry)
             # add_reverse_snat_table_entry(p4i_helper, bmv2_sw, reverse_snat_entry)
 
-if __name__ == '__main__':
-    main(p4i_file_path=BMV2_SWITCH['p4i_file_path'],
-         bmv2_json_file_path=BMV2_SWITCH['json_file_path'])
+
+    def shutdown(self):
+        ShutdownAllSwitchConnections()
