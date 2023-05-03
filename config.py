@@ -37,7 +37,7 @@ BMV2_SWITCH = {
     'users_interface': {
         'switch_port': 0,
         'mac': '42:01:0a:c8:00:04',
-        'public_ip': '',
+        'public_ip': '34.154.94.220',
     },
     'cluster_interfaces': [{
         'switch_port': 1,

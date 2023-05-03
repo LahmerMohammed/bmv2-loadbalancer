@@ -78,7 +78,7 @@ class Controller:
                 'egress_port': entry["params"]["egress_port"],
             }
         )
-        self.bmv2_sw.WriteTableEntry(able_entry=table_entry)
+        self.bmv2_sw.WriteTableEntry(table_entry=table_entry)
 
 
     def add_reverse_snat_table_entry(self, entry: dict):
@@ -142,14 +142,15 @@ class Controller:
             reverse_snat_entry = {
                 'match': { 'dstPort': datagram.sport },
                 'params': {
-                    'dstIpAddr': str(packet.src),
-                    'dstPort': str(datagram.sport),
+                    'dstIpAddr': packet.src,
+                    'dstPort': datagram.sport,
                     'dstMacAddr': BMV2_SWITCH['gateway_interface']['mac'],
                     'srcIpAddr': BMV2_SWITCH['users_interface']['public_ip'],
                     'egress_port': BMV2_SWITCH["users_interface"]["switch_port"]
                 }
             }        
             self.add_reverse_snat_table_entry(reverse_snat_entry)
+            print("A new user have connected with ip: {} and port: {}".format(packet.src, datagram.sport))
 
 
     def shutdown(self):
