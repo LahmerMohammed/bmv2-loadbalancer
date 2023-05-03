@@ -88,7 +88,7 @@ struct metadata {
 
 
 enum bit<7> Reason_t {
-    NO_RULE_MATCH   = 0
+    NO_RULE_MATCH   = 14
 }
 
 @controller_header("packet_in")
@@ -166,6 +166,8 @@ control MyIngress(inout headers hdr,
         mark_to_drop(standard_metadata);
     }
 
+    action no_action() {}
+
     action snat_a(ipv4Addr_t dstIpAddr, macAddr_t dstMacAddr,
                   ipv4Addr_t srcIpAddr,bit<16> srcPort, bit<9> egress_port) {
         hdr.ethernet.dstAddr = dstMacAddr; 
@@ -193,24 +195,6 @@ control MyIngress(inout headers hdr,
         standard_metadata.egress_spec = egress_port;
     }
 
-    action set_ecmp_group(bit<16> group_id, bit<32> number_of_ecmp_path) { 
-        hash(
-            meta.ecmp_path_id,
-            HashAlgorithm.crc16,
-            (bit<1>)0, // ecmp_base
-            {
-                hdr.ipv4.srcAddr,
-                hdr.ipv4.dstAddr,
-                hdr.ipv4.protocol,
-                hdr.tcp.srcPort,
-                hdr.tcp.dstPort
-            },
-            number_of_ecmp_path);
-
-        meta.ecmp_path_id = 1;
-        meta.ecmp_group_id = group_id;
-    }
-
     action send_to_controller() {
         standard_metadata.egress_spec = CPU_PORT;
         hdr.packet_in.setValid();
@@ -218,13 +202,13 @@ control MyIngress(inout headers hdr,
         hdr.packet_in.ingress_port = standard_metadata.ingress_port;
     }
 
-    table ecmp_group {
+    table service {
         key = {
             hdr.tcp.dstPort: exact;
         }
 
         actions = {
-            set_ecmp_group;
+            no_action;
             drop;
         }
         size = 1024;
@@ -233,8 +217,9 @@ control MyIngress(inout headers hdr,
 
     table snat_t {
         key = {
-            meta.ecmp_group_id: exact;
-            meta.ecmp_path_id: exact;
+            hdr.ipv4.srcAddr: exact;
+            hdr.tcp.srcPort: exact;
+            hdr.tcp.dstPort: exact;
         }
         actions = {
             snat_a;
@@ -261,11 +246,17 @@ control MyIngress(inout headers hdr,
         if (hdr.ipv4.isValid() && hdr.ipv4.ttl > 0 && hdr.tcp.isValid()) {
 
             if (standard_metadata.ingress_port == 0) {
-                switch(ecmp_group.apply().action_run) {
-                    set_ecmp_group: {
+                switch(service.apply().action_run) {
+                    no_action: {
                         snat_t.apply();
-                    } 
-                }           } 
+                    }
+                    
+                    // If 'no_action' action haven't been executed, means 'send_to_controller' action 
+                    // have been executed as it is the default action, therefore we should terminate 
+                    // the processing of this packet as it was sent to the controller
+                }           
+                
+            } 
             else {
                 reverse_snat_t.apply();  
             }

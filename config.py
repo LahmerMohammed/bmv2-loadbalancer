@@ -6,12 +6,12 @@ services = [
     {
         'id': 1,
         'name': 'tcp_server',
-        'port': 55555,
+        'port': 9000,
         'servers': [
             {
                 'id': 1,
                 'ip': '10.198.0.2',
-                'port': 1,
+                'connected_to_sw_port': 1,
             }
         ],
     },
@@ -20,7 +20,11 @@ services = [
         'name': 'yolo_model',
         'port': 8000,
         'servers': [
-            '10.198.0.2'
+            {
+                'id': 1,
+                'ip': '10.198.0.2',
+                'connected_to_sw_port': 1,
+            }   
         ]
     },
 

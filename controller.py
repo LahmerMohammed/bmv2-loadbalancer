@@ -3,8 +3,6 @@ from config import *
 from helpers import *
 
 from p4runtime_lib.switch import ShutdownAllSwitchConnections
-from p4runtime_lib.bmv2 import Bmv2SwitchConnection
-from p4runtime_lib.helper import P4InfoHelper
 from p4runtime_lib import bmv2, helper
 from protobuf_to_dict import protobuf_to_dict
 import grpc
@@ -31,8 +29,6 @@ class Controller:
             print(
                 "[✅] Installed loadbalancer P4 Program using SetForwardingPipelineConfig on the switch.")
 
-            self.add_ecmp_table_entry(port=55555, group_id=55555, number_of_ecmp_path=1)
-
         except grpc.RpcError as e:
             printGrpcError(e)
 
@@ -43,6 +39,8 @@ class Controller:
 
         for c_if in BMV2_SWITCH["cluster_interfaces"]:
             self.add_send_frame_table_entry(port=c_if["switch_port"],mac_addr=c_if["mac"])
+
+        self.add_service_table_entry(port=8000)
 
         print('[✅] Default entries added successfully ')
 
@@ -59,32 +57,16 @@ class Controller:
             }
         )
     
-        self.bmv2_sw.WriteTableEntry(table_entry=table_entry)
-
-
-    def add_ecmp_table_entry(self,port: int, group_id: int,
-                             number_of_ecmp_path: int
-                             ):
-        table_entry = self.p4i_helper.buildTableEntry(
-            table_name='MyIngress.ecmp_group',
-            match_fields={
-                'hdr.tcp.dstPort': port
-            },
-            action_name='MyIngress.set_ecmp_group',
-            action_params={
-                'group_id': group_id,
-                'number_of_ecmp_path': number_of_ecmp_path
-            }
-        )
-        self.bmv2_sw.WriteTableEntry(table_entry=table_entry)
+        self.bmv2_sw.WriteTableEntry(dry_run=True, table_entry=table_entry)
 
 
     def add_snat_table_entry(self, entry: dict):
         table_entry = self.p4i_helper.buildTableEntry(
             table_name='MyIngress.snat_t',
             match_fields={
-                'meta.ecmp_group_id': entry["match"]["group_id"],
-                'meta.ecmp_path_id': entry["match"]["path_id"]
+                'hdr.ipv4.srcAddr': entry["match"]["srcIpAddr"],
+                'hdr.tcp.srcPort': entry["match"]["srcTcpPort"],
+                'hdr.tcp.dstPort': entry["match"]["dstTcpPort"],
             },
             action_name='MyIngress.snat_a',
             action_params={
@@ -95,14 +77,14 @@ class Controller:
                 'egress_port': entry["params"]["egress_port"],
             }
         )
-        self.bmv2_sw.WriteTableEntry(table_entry=table_entry)
+        self.bmv2_sw.WriteTableEntry(dry_run=True, table_entry=table_entry)
 
 
     def add_reverse_snat_table_entry(self, entry: dict):
         table_entry = self.p4i_helper.buildTableEntry(
             table_name='MyIngress.reverse_snat_t',
             match_fields={
-                'hdr.tcp.dstPort': entry["match"]["tcpDstPort"],
+                'hdr.tcp.dstPort': entry["match"]["dstPort"],
             },
             action_name='MyIngress.reverse_snat_a',
             action_params={
@@ -114,8 +96,19 @@ class Controller:
             }
         )
 
-        self.bmv2_sw.WriteTableEntry(table_entry=table_entry)
+        self.bmv2_sw.WriteTableEntry(dry_run=True, table_entry=table_entry)
 
+    
+    def add_service_table_entry(self, port: int):
+        table_entry = self.p4i_helper.buildTableEntry(
+            table_name='MyIngress.service',
+            match_fields={
+                'hdr.tcp.dstPort': port,
+            },
+            action_name='MyIngress.no_action',
+        )
+
+        self.bmv2_sw.WriteTableEntry(dry_run=True, table_entry=table_entry)
 
     def receivePacketsFromDataplane(self):
         print('[✅] Waiting to receive packets from dataplane ...')
@@ -127,27 +120,30 @@ class Controller:
             print(type(packet))
             print(packet.src)
             print(datagram.sport)
+
+
+            # Here add load balancer to choose a server from available servers for that service
+            server = services['servers'][0]
             
             snat_entry = {
-                'match': {'group_id': 55555, 'path_id': 1},
+                'match': {
+                    'srcIpAddr': packet.src,
+                    'srcTcpPort': datagram.sport,
+                    'dstTcpPort': datagram.dport,
+                },
                 'params': {
-                    # service ip addr
-                    'dstIpAddr': 'service_ip',
-                    # gateway mac addr
+                    'dstIpAddr': server['ip'],
                     'dstMacAddr': BMV2_SWITCH['gateway_interface']['mac'],
                     'srcIpAddr': BMV2_SWITCH['cluster_interfaces'][0]['private_ip'],
-                    'srcPort': 30001,  #
-                    'egress_port': services[0]['servers'][0]['port']
+                    'srcPort': datagram.sport,  
+                    'egress_port': server['connected_to_sw_port']
                 }
             }
             
-            # add_snat_table_entry(p4i_helper, bmv2_sw, snat_entry)
-            print(snat_entry)
+            self.add_snat_table_entry(snat_entry)
             
             reverse_snat_entry = {
-                # must
-                # match srcPort in snat action
-                'match': {'hdr.tcp.dstPort': '30001'},
+                'match': { 'dstPort': datagram.sport },
                 'params': {
                     'dstIpAddr': packet.src,
                     'dstPort': datagram.sport,
@@ -155,10 +151,8 @@ class Controller:
                     'srcIpAddr': BMV2_SWITCH['users_interface']['public_ip'],
                     'egress_port': BMV2_SWITCH["users_interface"]["switch_port"]
                 }
-            }
-            print(reverse_snat_entry)
-        
-            # add_reverse_snat_table_entry(p4i_helper, bmv2_sw, reverse_snat_entry)
+            }        
+            self.add_reverse_snat_table_entry(reverse_snat_entry)
 
 
     def shutdown(self):
