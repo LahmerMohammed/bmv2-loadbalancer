@@ -15,19 +15,4 @@ spec:
     - "git clone https://github.com/LahmerMohammed/bmv2-loadbalancer.git && cd bmv2-loadbalancer/ml_model/yolo/api && sleep infinity"
     ports:
     - containerPort: 8000
-    livenessProbe:
-      httpGet:
-        path: /health
-        port: 8000
-      initialDelaySeconds: 200
-      periodSeconds: 5
-      timeoutSeconds: 5
-    readinessProbe:
-      httpGet:
-        path: /
-        port: 8000
-      initialDelaySeconds: 120
-      periodSeconds: 5
-      timeoutSeconds: 3
-    
     
