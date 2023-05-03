@@ -7,7 +7,7 @@ bmv2_json_file_path=BMV2_SWITCH['json_file_path']
 
 def main():
     controller = Controller(p4i_file_path, bmv2_json_file_path)
-
+    controller.add_default_entries()
     try:
         controller.receivePacketsFromDataplane()
     except KeyboardInterrupt:

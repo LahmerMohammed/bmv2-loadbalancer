@@ -40,6 +40,7 @@ class Controller:
         for c_if in BMV2_SWITCH["cluster_interfaces"]:
             self.add_send_frame_table_entry(port=c_if["switch_port"],mac_addr=c_if["mac"])
 
+        
         self.add_service_table_entry(port=8000)
 
         print('[✅] Default entries added successfully ')
@@ -57,7 +58,7 @@ class Controller:
             }
         )
     
-        self.bmv2_sw.WriteTableEntry(dry_run=True, table_entry=table_entry)
+        self.bmv2_sw.WriteTableEntry(table_entry=table_entry)
 
 
     def add_snat_table_entry(self, entry: dict):
@@ -77,7 +78,7 @@ class Controller:
                 'egress_port': entry["params"]["egress_port"],
             }
         )
-        self.bmv2_sw.WriteTableEntry(dry_run=True, table_entry=table_entry)
+        self.bmv2_sw.WriteTableEntry(able_entry=table_entry)
 
 
     def add_reverse_snat_table_entry(self, entry: dict):
@@ -96,7 +97,7 @@ class Controller:
             }
         )
 
-        self.bmv2_sw.WriteTableEntry(dry_run=True, table_entry=table_entry)
+        self.bmv2_sw.WriteTableEntry(table_entry=table_entry)
 
     
     def add_service_table_entry(self, port: int):
@@ -108,7 +109,7 @@ class Controller:
             action_name='MyIngress.no_action',
         )
 
-        self.bmv2_sw.WriteTableEntry(dry_run=True, table_entry=table_entry)
+        self.bmv2_sw.WriteTableEntry(table_entry=table_entry)
 
     def receivePacketsFromDataplane(self):
         print('[✅] Waiting to receive packets from dataplane ...')
@@ -117,13 +118,9 @@ class Controller:
             ether = Ether(result["packet"]["payload"])
             packet = ether.payload
             datagram = packet.payload
-            print(type(packet))
-            print(packet.src)
-            print(datagram.sport)
-
 
             # Here add load balancer to choose a server from available servers for that service
-            server = services['servers'][0]
+            server = services[0]['servers'][0]
             
             snat_entry = {
                 'match': {
@@ -145,9 +142,9 @@ class Controller:
             reverse_snat_entry = {
                 'match': { 'dstPort': datagram.sport },
                 'params': {
-                    'dstIpAddr': packet.src,
-                    'dstPort': datagram.sport,
-                    'dstMacAddr': BMV2_SWITCH['gateway_interface'],
+                    'dstIpAddr': str(packet.src),
+                    'dstPort': str(datagram.sport),
+                    'dstMacAddr': BMV2_SWITCH['gateway_interface']['mac'],
                     'srcIpAddr': BMV2_SWITCH['users_interface']['public_ip'],
                     'egress_port': BMV2_SWITCH["users_interface"]["switch_port"]
                 }
