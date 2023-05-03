@@ -6,7 +6,7 @@ services = [
     {
         'id': 1,
         'name': 'tcp_server',
-        'port': 9000,
+        'port': 8000,
         'servers': [
             {
                 'id': 1,
@@ -18,7 +18,7 @@ services = [
     {
         'id': 2,
         'name': 'yolo_model',
-        'port': 8000,
+        'port': 9000,
         'servers': [
             {
                 'id': 1,
