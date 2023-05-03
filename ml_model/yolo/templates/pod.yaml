@@ -8,11 +8,11 @@ metadata:
 spec:
   containers:
   - name: yolo-container
-    image: python:3.10
+    image: tensorflow/serving
     args: 
     - "/bin/bash"
     - "-c"
-    - "git clone https://github.com/LahmerMohammed/bmv2-loadbalancer.git && cd bmv2-loadbalancer/ml_model/yolo/api && sleep infinity"
+    - "sleep infinity"
     ports:
     - containerPort: 8000
     
