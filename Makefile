@@ -66,7 +66,7 @@ install:
 	pip3 install virtualenv
 	python3 -m venv p4lb
 	source p4lb/bin/activate
-	pip3 install -r requirements.txt
+	pip3 install -r controller/requirements.txt
 	pip3 install git+https://github.com/kaporzhu/protobuf-to-dict.git
 	git clone https://github.com/p4lang/tutorials
 	cd tutorials
@@ -93,3 +93,8 @@ install-kubectl:
 	curl -LO "https://dl.k8s.io/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl.sha256"
 	echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
 	sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+
+
+
+# Get nodes/pods metrics in k8s
+kubectl get  --raw /apis/metrics.k8s.io/v1beta1/namespaces/default/pods/yolo-v3 | jq
