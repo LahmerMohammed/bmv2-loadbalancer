@@ -3,7 +3,7 @@ import numpy as np
 import io
 import cv2
 import cvlib as cv
-from fastapi import FastAPI, UploadFile, HTTPException, Depends
+from fastapi import FastAPI, UploadFile, HTTPException
 from enum import Enum
 import datetime
 

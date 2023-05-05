@@ -6,4 +6,3 @@ python-multipart==0.0.6
 Pillow==9.5.0
 tensorflow
 cvlib
-prometheus-client==0.16.0 
