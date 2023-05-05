@@ -3,7 +3,7 @@ import numpy as np
 import io
 import cv2
 import cvlib as cv
-from fastapi import FastAPI, UploadFile, HTTPException
+from fastapi import FastAPI, UploadFile, HTTPException, Depends
 from enum import Enum
 import datetime
 
@@ -28,6 +28,12 @@ def home():
 
 @app.middleware("http")
 async def update_metrics(request, call_next):
+
+    if str(request.url.path) != '/predict':
+        response = await call_next(request)
+        return response
+    
+
     timestamp = datetime.datetime.now()
     REQUEST_COUNTER.append(timestamp)
 
@@ -57,7 +63,7 @@ async def get_stats(window: int = WINDOW):
     for req_c in reversed(REQUEST_COUNTER): 
         if req_c < starting_from:
             break
-        request_rate = request_rate + 1/window
+        request_rate = request_rate + 1
     
 
     request_latency = []
@@ -65,10 +71,10 @@ async def get_stats(window: int = WINDOW):
         if req_l['timestamp'] < starting_from:
             break
         request_latency.append(req_l['value'])
-
+    
     return {
-        "request_rate": request_rate,
-        "request_latency": sum(request_latency) / len(request_latency)
+        "request_rate": request_rate / window,
+        "request_latency": 0 if len(request_latency) == 0 else  sum(request_latency) / len(request_latency)
     }
 
 @app.get("/health")
