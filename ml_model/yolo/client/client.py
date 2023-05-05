@@ -1,5 +1,7 @@
 import requests
 from enum import Enum
+from KubernetesCLI import Kubernetes
+
 
 NUMBER_OF_REQUESTS = 100
 endpoint = "http://localhost:8000/predict"
@@ -43,8 +45,14 @@ def predict(image_name: str, model: Model = 'yolov3'):
 
 
 if __name__ == '__main__':
+    """
     number_of_images = len(images)
     for i in range(NUMBER_OF_REQUESTS):
         predict(image_name=images[i % number_of_images])
     
     print(get_stats().content)
+    """
+
+    kubernetes = Kubernetes()
+
+    print(kubernetes.get_pod_stat(pod_name="yolo-v3"))
