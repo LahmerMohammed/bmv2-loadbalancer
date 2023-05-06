@@ -91,10 +91,6 @@ if __name__ == '__main__':
         
         print('The pod is ready !')
 
-        response = predict("images/cars.jpg")
-
-        sleep(30)
-
         result = subprocess.run(['locust', '-f', 'loadtest.py', '--headless',
                                  '--users', '5', '--spawn-rate', '5', '--run-time','25s',
                                  '--host', 'http://34.154.94.220:32474', '--skip-log-setup'], 
