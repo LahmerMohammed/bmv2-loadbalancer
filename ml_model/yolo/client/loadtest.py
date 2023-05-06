@@ -14,7 +14,7 @@ class LoadTest(HttpUser):
         image_name = 'images/cars.jpg'
         files = {'image': (image_name, open(image_name, 'rb'), 'image/jpeg')}
         headers = {'accept': 'application/json'}
-        self.client.post("/predict?model=yolov3-tiny",
+        self.client.post("/predict?model=yolov3",
                          files=files, headers=headers)
 
 
