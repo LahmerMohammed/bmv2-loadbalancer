@@ -18,18 +18,15 @@ if [ ! -d "/root/.cvlib/object_detection/yolo/yolov3" ]; then
   mkdir -p /root/.cvlib/object_detection/yolo/yolov3
 fi
 
-# Change to directory
-cd /root/.cvlib/object_detection/yolo/yolov3
+yolo_path=/root/.cvlib/object_detection/yolo/yolov3
 
 # Download files
-wget https://pjreddie.com/media/files/yolov3.weights &
-wget https://github.com/pjreddie/darknet/raw/master/cfg/yolov3.cfg &
-wget https://github.com/arunponnusamy/object-detection-opencv/raw/master/yolov3.txt &
+wget https://pjreddie.com/media/files/yolov3.weights -O ${yolo_path}/yolov3.weights &
+wget https://github.com/pjreddie/darknet/raw/master/cfg/yolov3.cfg -O ${yolo_path}/yolov3.cfg &
+wget https://github.com/arunponnusamy/object-detection-opencv/raw/master/yolov3.txt -O ${yolo_path}/yolov3.txt &
 
 # Wait for all downloads to complete
 wait
-
-cd /bmv2-loadbalancer/ml_model/yolo/api
 
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
