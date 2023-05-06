@@ -12,16 +12,12 @@ spec:
     args: 
     - "/bin/bash"
     - "-c"
-    - "git clone https://github.com/LahmerMohammed/bmv2-loadbalancer.git && cd bmv2-loadbalancer/ml_model/yolo/api && chmod +x ./run.sh && ./run.sh && sleep infinity"
+    - "git clone -b v2 https://github.com/LahmerMohammed/bmv2-loadbalancer.git && cd bmv2-loadbalancer/ml_model/yolo/api && chmod +x ./run.sh && ./run.sh && sleep infinity"
     ports:
     - containerPort: 8000
     resources:
-      requests:
-        memory: "64Mi"
-        cpu: "250m"
       limits:
-        memory: "64Mi"
-        cpu: "500m"
+        cpu: "2652m"
               
     
     

@@ -3,3 +3,4 @@ python-multipart==0.0.6
 cvlib
 tensorflow
 kubernetes
+locust
