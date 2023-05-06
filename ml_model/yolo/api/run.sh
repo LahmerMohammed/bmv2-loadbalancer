@@ -29,8 +29,7 @@ wget https://github.com/arunponnusamy/object-detection-opencv/raw/master/yolov3.
 # Wait for all downloads to complete
 wait
 
-
-cd ${current_dir}
+cd /bmv2-loadbalancer/ml_model/yolo/api
 
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
