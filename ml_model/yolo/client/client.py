@@ -71,6 +71,7 @@ STOP_THREAD = False
 
 def save_pod_stats():
     global cpu_usage
+    global STOP_THREAD
     sleep(10)
     pod_metrics = kubernetes.get_pod_stat(POD_NAME)
     while not STOP_THREAD:
@@ -82,6 +83,7 @@ def save_pod_stats():
 
 def main():
     global cpu_usage
+    global STOP_THREAD
     stats_file = open('stats.txt', 'a')
 
     for cpu in cpu_values:
