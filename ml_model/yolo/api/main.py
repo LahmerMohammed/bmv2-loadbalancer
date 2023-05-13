@@ -31,7 +31,7 @@ def home():
 async def update_metrics(request, call_next):
 
     if str(request.url.path) != '/predict':
-        response = call_next(request)
+        response = await call_next(request)
         return response
     
 
@@ -40,7 +40,7 @@ async def update_metrics(request, call_next):
 
     
     start_time = datetime.datetime.now()
-    response = call_next(request)
+    response = await call_next(request)
     end_time = datetime.datetime.now()
     total_time = (end_time - start_time).total_seconds()
 
