@@ -79,7 +79,7 @@ async def get_stats(window: int = app.WINDOW):
     }
 
 @app.get("/health")
-async def health():
+def health():
     return {"status": "ok"}
 
 @app.post('/predict')
