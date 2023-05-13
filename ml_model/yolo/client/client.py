@@ -4,6 +4,7 @@ from enum import Enum
 import yaml
 from time import sleep
 import subprocess
+from k8s import KubernetesCLI
 
 
 server_ip = "34.154.187.246"
@@ -58,33 +59,9 @@ def get_pod_status(pod_name: str):
         # If the response is not successful, print the error message
         return None
 
-def add_pod(pod: dict): 
-    url = "http://{}:14000/pods".format(server_ip)
-    response = requests.post(url, json=pod)
 
-    if response.status_code == 200:
-        print("Pod created successfully.")
-    else:
-        return None
-    
-def delete_pod(pod_name: str): 
-    url = "http://{}:14000/pods/{}".format(server_ip, pod_name)
-    response = requests.delete(url)
+kubernetes = KubernetesCLI()
 
-    if response.status_code == 200:
-        return response
-    else:
-        return None
-
-def get_pod_stats(pod_name: str):
-
-    url = "http://{}:14000/pod/{}/stats".format(server_ip, pod_name)
-    response = requests.get(url)
-
-    if response.status_code == 200:
-        return response.json()
-    else:
-        return None
 
 
 cpu_values = ["3052m", "4052m"]
@@ -95,22 +72,23 @@ STOP_THREAD = False
 def save_pod_stats():
     global cpu_usage
     sleep(10)
-    pod_metrics = get_pod_stats(POD_NAME)
+    pod_metrics = kubernetes.get_pod_stat(POD_NAME)
     while not STOP_THREAD:
         if pod_metrics != None:
             cpu_usage.append(pod_metrics[0]["containers"][0]["usage"]["cpu"])
         sleep(1)
-        pod_metrics = get_pod_stats(POD_NAME)
+        pod_metrics = kubernetes.get_pod_stat(POD_NAME)
 
 
 def main():
     global cpu_usage
     stats_file = open('stats.txt', 'a')
+
     for cpu in cpu_values:
         
         thread = Thread(target=save_pod_stats)
         # Delete pod if exist
-        delete_pod(POD_NAME)
+        kubernetes.delete_pod(POD_NAME)
         yolo_api_status = get_yolo_api_status()
         print("Deleting pod {} ....".format(POD_NAME))
         while yolo_api_status != None:
@@ -120,14 +98,9 @@ def main():
         print("Pod {} was deleted successfully.".format(POD_NAME))
 
         print('Running scenario: cpu = {}'.format(cpu))
-        
-        f = open('../templates/pod.yaml')
-        pod = yaml.safe_load(f)
-        pod["spec"]["containers"][0]["resources"]["limits"]["cpu"] = cpu
 
         print('Adding pod with new cpu limits ...')
-        
-        add_pod(pod=pod)
+        kubernetes.create_pod('../templates/pod.yaml', cpu=cpu)
         yolo_api_status = get_yolo_api_status()
         print('The pod isn\'t ready yet!')
         while yolo_api_status == None:
