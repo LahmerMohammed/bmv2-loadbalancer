@@ -4,3 +4,5 @@ cvlib
 tensorflow
 kubernetes
 locust
+requests
+kubernetes

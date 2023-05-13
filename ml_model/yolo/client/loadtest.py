@@ -7,7 +7,7 @@ endpoint = "http://{}:32474/predict".format(server_ip)
 
 
 class LoadTest(HttpUser):
-    wait_time = between(1, 5)
+    wait_time = between(1, 1)
 
     @task
     def predict(self):

@@ -7,9 +7,6 @@ from fastapi import FastAPI, UploadFile, HTTPException
 from enum import Enum
 import datetime
 
-REQUEST_COUNTER = []
-REQUEST_LATENCY = []
-WINDOW = 10 # seconds
 
 
 # List available models using Enum for convenience. This is useful when the options are pre-defined.
@@ -19,6 +16,10 @@ class Model(str, Enum):
 
 
 app = FastAPI(title='Deploying a ML Model with FastAPI')
+
+app.REQUEST_COUNTER = []
+app.REQUEST_LATENCY = []
+app.WINDOW = 10 # seconds
 
 
 @app.get("/")
@@ -30,44 +31,44 @@ def home():
 async def update_metrics(request, call_next):
 
     if str(request.url.path) != '/predict':
-        response = await call_next(request)
+        response = call_next(request)
         return response
     
 
     timestamp = datetime.datetime.now()
-    REQUEST_COUNTER.append(timestamp)
+    app.REQUEST_COUNTER.append(timestamp)
 
     
     start_time = datetime.datetime.now()
-    response = await call_next(request)
+    response = call_next(request)
     end_time = datetime.datetime.now()
     total_time = (end_time - start_time).total_seconds()
 
     timestamp = datetime.datetime.now()
-    REQUEST_LATENCY.append({
+    app.REQUEST_LATENCY.append({
         'timestamp': datetime.datetime.now(),
         'value': total_time
     })
     return response
 
 @app.get('/stats')
-async def get_stats(window: int = WINDOW):
+async def get_stats(window: int = app.WINDOW):
 
     if window is not None and window <= 0:
-        return {"detwindowail": "Window must be a positive integer greather than zero !"}
+        return {"windowail": "Window must be a positive integer greather than zero !"}
     
     starting_from = datetime.datetime.now() - datetime.timedelta(seconds=window) 
     
     
     request_rate = 0
-    for req_c in reversed(REQUEST_COUNTER): 
+    for req_c in reversed(app.REQUEST_COUNTER): 
         if req_c < starting_from:
             break
         request_rate = request_rate + 1
     
 
     request_latency = []
-    for req_l in reversed(REQUEST_LATENCY): 
+    for req_l in reversed(app.REQUEST_LATENCY): 
         if req_l['timestamp'] < starting_from:
             break
         request_latency.append(req_l['value'])
@@ -111,3 +112,10 @@ async def predict(model: Model, image: UploadFile):
 
     # Return objects detected in the image
     return response
+
+
+"""
+cpu_usage
+avg_latency
+drop_rate
+"""

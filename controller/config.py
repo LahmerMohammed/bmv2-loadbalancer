@@ -36,13 +36,13 @@ BMV2_SWITCH = {
     'server_addr': '127.0.0.1:9559',
     'users_interface': {
         'switch_port': 0,
-        'mac': '42:01:0a:c8:00:04',
-        'public_ip': '34.154.94.220',
+        'mac': '42:01:0a:c6:00:0d',
+        'public_ip': '34.154.187.246',
     },
     'cluster_interfaces': [{
         'switch_port': 1,
-        'mac': '42:01:0a:c6:00:05',
-        'private_ip': '10.198.0.5'
+        'mac': '42:01:ac:14:00:08',
+        'private_ip': '172.20.0.8'
     }
     ],
     'gateway_interface': {

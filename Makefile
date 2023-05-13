@@ -62,39 +62,24 @@ install:
 	echo "deb https://download.opensuse.org/repositories/home:/p4lang/${OS_RELEASE}_${VERSION_ID}/ /" | sudo tee /etc/apt/sources.list.d/home:p4lang.list
 	curl -fsSL https://download.opensuse.org/repositories/home:p4lang/${OS_RELEASE}_${VERSION_ID}/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/home_p4lang.gpg > /dev/null
 	apt update
-	apt install p4lang-p4c p4lang-bmv2 -y
+	apt install p4lang-p4c p4lang-bmv2 python3-pip -y
 	pip3 install virtualenv
 	python3 -m venv p4lb
-	source p4lb/bin/activate
+	. p4lb/bin/activate
 	pip3 install -r controller/requirements.txt
 	pip3 install git+https://github.com/kaporzhu/protobuf-to-dict.git
-	git clone https://github.com/p4lang/tutorials
-	cd tutorials
-	git sparse-checkout set --no-cone utils
-	git checkout
-	cd ..
-	mv tutorials/utils .
-	rm -rf tutorials
-	cp -r /usr/lib/python3/dist-packages/p4/ ~/projects/thesis/utils
 
-
-install-kind:
-
-#	curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.18.0/kind-linux-amd64
-#	chmod +x ./kind
-#	sudo mv ./kind /usr/local/bin/kind
-#	wget https://kind.sigs.k8s.io/examples/kind-with-registry.sh
-	chmod +x kind-with-registry.sh
-	sh kind-with-registry.sh
-
-
-install-kubectl:
-	curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-	curl -LO "https://dl.k8s.io/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl.sha256"
-	echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
-	sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 
 
 
 # Get nodes/pods metrics in k8s
-kubectl get  --raw /apis/metrics.k8s.io/v1beta1/namespaces/default/pods/yolo-v3 | jq
+#kubectl get  --raw /apis/metrics.k8s.io/v1beta1/namespaces/default/pods/yolo-v3 | jq
+#git clone https://github.com/p4lang/tutorials
+#	cd tutorials
+#	git sparse-checkout set --no-cone utils
+#	git checkout
+#	cd ..
+#	mv tutorials/utils .
+#	rm -rf tutorials
+#	cp -r /usr/lib/python3/dist-packages/p4/ ~/projects/thesis/utils
+

@@ -1,3 +1,4 @@
+from threading import Thread
 import requests
 from enum import Enum
 import yaml
@@ -5,12 +6,13 @@ from time import sleep
 import subprocess
 
 
-server_ip = "34.154.211.49"
+server_ip = "34.154.187.246"
 
 endpoint = "http://{}:32474".format(server_ip)
 images = ['images/cars.jpg']
 
 
+POD_NAME = "yolo-v3"
 class Model(str, Enum):
     yolov3tiny = "yolov3-tiny"
     yolov3 = "yolov3"
@@ -54,7 +56,7 @@ def get_pod_status(pod_name: str):
         print(f"Pod status: {response.json()['status']}")
     else:
         # If the response is not successful, print the error message
-        print(f"Error: {response.json()['message']}")
+        return None
 
 def add_pod(pod: dict): 
     url = "http://{}:14000/pods".format(server_ip)
@@ -63,8 +65,8 @@ def add_pod(pod: dict):
     if response.status_code == 200:
         print("Pod created successfully.")
     else:
-        print(f"Error: {response}")
-
+        return None
+    
 def delete_pod(pod_name: str): 
     url = "http://{}:14000/pods/{}".format(server_ip, pod_name)
     response = requests.delete(url)
@@ -72,31 +74,50 @@ def delete_pod(pod_name: str):
     if response.status_code == 200:
         return response
     else:
-        print(f"Error: {response}")
+        return None
+
+def get_pod_stats(pod_name: str):
+
+    url = "http://{}:14000/pod/{}/stats".format(server_ip, pod_name)
+    response = requests.get(url)
+
+    if response.status_code == 200:
+        return response.json()
+    else:
+        return None
 
 
+cpu_values = ["3052m", "4052m"]
+cpu_usage = []
+
+STOP_THREAD = False
+
+def save_pod_stats():
+    global cpu_usage
+    sleep(10)
+    pod_metrics = get_pod_stats(POD_NAME)
+    while not STOP_THREAD:
+        if pod_metrics != None:
+            cpu_usage.append(pod_metrics[0]["containers"][0]["usage"]["cpu"])
+        sleep(1)
+        pod_metrics = get_pod_stats(POD_NAME)
 
 
-NUMBER_OF_REQUESTS = 50
-
-
-cpu_values = ["3052m", "3552m"]
-
-if __name__ == '__main__':
-
+def main():
+    global cpu_usage
     stats_file = open('stats.txt', 'a')
     for cpu in cpu_values:
         
-            
+        thread = Thread(target=save_pod_stats)
         # Delete pod if exist
-        delete_pod("yolo-v3")
+        delete_pod(POD_NAME)
         yolo_api_status = get_yolo_api_status()
-        print("Deleting pod yolo-v3 ....")
+        print("Deleting pod {} ....".format(POD_NAME))
         while yolo_api_status != None:
             yolo_api_status = get_yolo_api_status()
-            sleep(5)
+            sleep(2)
         
-        print("Pod yolo-v3 was deleted successfully.")
+        print("Pod {} was deleted successfully.".format(POD_NAME))
 
         print('Running scenario: cpu = {}'.format(cpu))
         
@@ -108,18 +129,21 @@ if __name__ == '__main__':
         
         add_pod(pod=pod)
         yolo_api_status = get_yolo_api_status()
+        print('The pod isn\'t ready yet!')
         while yolo_api_status == None:
-            sleep(10)
-            print('The pod isn\'t ready yet!')
+            sleep(2)
             yolo_api_status = get_yolo_api_status()
         print('The new pod was added successfully')
 
         print("Starting test load ....")
+        thread.start()
         try:
-            result = subprocess.run(['locust', '-f', 'loadtest.py', '--headless',
-                                     '--users', '5', '--spawn-rate', '5', '--run-time','25s',
-                                     '--host', 'http://34.154.211.49:32474', '--skip-log-setup'], 
+            subprocess.run(['locust', '-f', 'loadtest.py', '--headless',
+                                     '--users', '5', '--spawn-rate', '1', '--run-time','30s',
+                                     '--host', 'http://{}:32474'.format(server_ip), '--skip-log-setup'], 
                                      check=True, capture_output=True, text=True)
+            
+            STOP_THREAD = True
         except subprocess.CalledProcessError as e:
             print(e.stderr)
 
@@ -127,12 +151,14 @@ if __name__ == '__main__':
         
         stats = get_stats().content
 
-        stats_file.write("cpu: " + cpu + " : " + str(stats) + "\n")
+        stats_file.write("cpu: " + cpu + " : " + str(stats) + str(cpu_usage) + "\n")
+        cpu_usage = []
 
-        
+    stats_file.close()
 
 
-
+if __name__ == '__main__':
+    main()
 
 """
 import cv2
@@ -150,17 +176,6 @@ def draw_box_arond_predicted_objects(image_name, bbox, label, conf):
 
 usage': {'cpu': '2227090n', 'memory': '827592Ki'}
 usage': {'cpu': '2652553529n', 'memory': '828380Ki'}
-
-
-"""
-
-"""
-'cpu': '1052m': b'{"request_rate":0.4,"request_latency":8.9997528}'
-'cpu': '1552m': b'{"request_rate":0.45,"request_latency":5.512513857142857}'
-'cpu': '2052m': b'{"request_rate":0.45,"request_latency":2.971245}'
-'cpu': '2652m': {"request_rate":0.55,"request_latency": 2.1856212307692306}
-'cpu': '3052m': {"request_rate":0.55,"request_latency": 2.1856212307692306}
-
 
 
 """
