@@ -58,7 +58,7 @@ async def get_stats(window: int = WINDOW):
     global REQUEST_COUNTER
     global REQUEST_LATENCY
     global WINDOW
-    
+
     if window is not None and window <= 0:
         return {"windowail": "Window must be a positive integer greather than zero !"}
     
@@ -67,14 +67,14 @@ async def get_stats(window: int = WINDOW):
     
     request_rate = 0
     for req_c in reversed(REQUEST_COUNTER): 
-        if req_c < starting_from:
+        if req_c > starting_from:
             break
         request_rate = request_rate + 1
     
 
     request_latency = []
     for req_l in reversed(REQUEST_LATENCY): 
-        if req_l['timestamp'] < starting_from:
+        if req_l['timestamp'] > starting_from:
             break
         request_latency.append(req_l['value'])
     
