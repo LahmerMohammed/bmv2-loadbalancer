@@ -17,9 +17,9 @@ class Model(str, Enum):
 
 app = FastAPI(title='Deploying a ML Model with FastAPI')
 
-app.REQUEST_COUNTER = []
-app.REQUEST_LATENCY = []
-app.WINDOW = 10 # seconds
+REQUEST_COUNTER = []
+REQUEST_LATENCY = []
+WINDOW = 10 # seconds
 
 
 @app.get("/")
@@ -45,14 +45,14 @@ async def update_metrics(request, call_next):
     total_time = (end_time - start_time).total_seconds()
 
     timestamp = datetime.datetime.now()
-    app.REQUEST_LATENCY.append({
+    REQUEST_LATENCY.append({
         'timestamp': datetime.datetime.now(),
         'value': total_time
     })
     return response
 
 @app.get('/stats')
-async def get_stats(window: int = app.WINDOW):
+async def get_stats(window: int = WINDOW):
 
     if window is not None and window <= 0:
         return {"windowail": "Window must be a positive integer greather than zero !"}
@@ -61,14 +61,14 @@ async def get_stats(window: int = app.WINDOW):
     
     
     request_rate = 0
-    for req_c in reversed(app.REQUEST_COUNTER): 
+    for req_c in reversed(REQUEST_COUNTER): 
         if req_c < starting_from:
             break
         request_rate = request_rate + 1
     
 
     request_latency = []
-    for req_l in reversed(app.REQUEST_LATENCY): 
+    for req_l in reversed(REQUEST_LATENCY): 
         if req_l['timestamp'] < starting_from:
             break
         request_latency.append(req_l['value'])
