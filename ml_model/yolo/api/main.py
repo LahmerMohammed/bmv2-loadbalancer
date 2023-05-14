@@ -78,8 +78,6 @@ async def get_stats(window: int = WINDOW):
             break
         request_latency.append(req_l['value'])
     
-    print(REQUEST_LATENCY[:5])
-    print(REQUEST_COUNTER[:5])
     
     return {
         "request_rate": request_rate / window,
