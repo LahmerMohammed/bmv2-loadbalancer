@@ -1,0 +1,2 @@
+
+cpu: 1500m : b'{"request_rate":0.75,"request_latency":7.890419}'(872.0, 872, 872)

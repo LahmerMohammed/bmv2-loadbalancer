@@ -5,13 +5,13 @@ import yaml
 from time import sleep
 import subprocess
 from k8s import KubernetesCLI
+import json
 
+server_ip = "10.198.0.11"
 
-server_ip = "34.154.187.246"
-
-endpoint = "http://{}:32474".format(server_ip)
 images = ['images/cars.jpg']
 
+yolo_service_endpoint = "http://{}:31977".format(server_ip)
 
 POD_NAME = "yolo-v3"
 class Model(str, Enum):
@@ -19,8 +19,8 @@ class Model(str, Enum):
     yolov3 = "yolov3"
 
 
-def get_stats():
-    url = 'http://{}:32474/stats?window=20'.format(server_ip)
+def get_stats(window=20):
+    url = '{}/stats?window={}'.format(yolo_service_endpoint, window)
     headers = {'accept': 'application/json'}
 
     return requests.get(url, headers=headers)
@@ -32,15 +32,17 @@ def predict(image_name: str, model: Model = 'yolov3-tiny'):
     files = {'image': (image_name, open(image_name, 'rb'), 'image/jpeg')}
 
     return requests.post(
-        endpoint, params=params, headers=headers, files=files)
+        yolo_service_endpoint, params=params, headers=headers, files=files)
 
 def get_yolo_api_status():
     headers = {'accept': 'application/json'}
-    url = "http://{}:32474/health".format(server_ip)
+    url = "{}/health".format(yolo_service_endpoint)
+
 
     try:
         response = requests.get(url, headers=headers)
         response.raise_for_status()  # Check for HTTP errors
+        print(response.json())
         return response.json()
     except requests.exceptions.RequestException as e:
         return None
@@ -63,23 +65,33 @@ def get_pod_status(pod_name: str):
 kubernetes = KubernetesCLI()
 
 
-
-cpu_values = ["3052m", "4052m"]
+cpu_values = ["1500m", "2000m", "2500m", "3000m", "3500m", "4000m", "4500m", "5000m"]
 cpu_usage = []
-
 STOP_THREAD = False
 
 def save_pod_stats():
+    print("thread has started ...")
     global cpu_usage
     global STOP_THREAD
-    sleep(10)
     pod_metrics = kubernetes.get_pod_stat(POD_NAME)
     while not STOP_THREAD:
         if pod_metrics != None:
-            cpu_usage.append(pod_metrics[0]["containers"][0]["usage"]["cpu"])
-        sleep(1)
+            cpu_usage.append(pod_metrics["containers"][0]["usage"]["cpu"])
+        sleep(5)
         pod_metrics = kubernetes.get_pod_stat(POD_NAME)
 
+def analyze_cpu_usage(cpu_usage_list):
+    # Convert each usage value to an integer in nanocores
+    cpu_usage_ints = [int(value.strip('n')) for value in cpu_usage_list]
+
+    # Convert to millicores and calculate average, max, and min
+    cpu_usage_millicores = [usage_int // 1000000 for usage_int in cpu_usage_ints]
+    avg_cpu_usage = sum(cpu_usage_millicores) / len(cpu_usage_millicores)
+    max_cpu_usage = max(cpu_usage_millicores)
+    min_cpu_usage = min(cpu_usage_millicores)
+
+    # Return the results as a tuple
+    return (avg_cpu_usage, max_cpu_usage, min_cpu_usage)
 
 def main():
     global cpu_usage
@@ -91,10 +103,8 @@ def main():
         thread = Thread(target=save_pod_stats)
         # Delete pod if exist
         kubernetes.delete_pod(POD_NAME)
-        yolo_api_status = get_yolo_api_status()
         print("Deleting pod {} ....".format(POD_NAME))
-        while yolo_api_status != None:
-            yolo_api_status = get_yolo_api_status()
+        while kubernetes.pod_exists(name=POD_NAME):
             sleep(2)
         
         print("Pod {} was deleted successfully.".format(POD_NAME))
@@ -114,19 +124,20 @@ def main():
         thread.start()
         try:
             subprocess.run(['locust', '-f', 'loadtest.py', '--headless',
-                                     '--users', '5', '--spawn-rate', '1', '--run-time','30s',
-                                     '--host', 'http://{}:32474'.format(server_ip), '--skip-log-setup'], 
+                                     '--users', '10', '--spawn-rate', '10', '--run-time','50s',
+                                     '--host', yolo_service_endpoint, '--skip-log-setup'], 
                                      check=True, capture_output=True, text=True)
             
             STOP_THREAD = True
+            print("Thread has stopped")
         except subprocess.CalledProcessError as e:
             print(e.stderr)
 
         print("Load test finished .")
         
-        stats = get_stats().content
+        stats = get_stats(window=40).content
 
-        stats_file.write("cpu: " + cpu + " : " + str(stats) + str(cpu_usage) + "\n")
+        stats_file.write("cpu: " + cpu + " : " + str(stats) + str(analyze_cpu_usage(cpu_usage)) + "\n")
         cpu_usage = []
 
     stats_file.close()
