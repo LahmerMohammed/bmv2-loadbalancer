@@ -29,14 +29,16 @@ def home():
 
 @app.middleware("http")
 async def update_metrics(request, call_next):
-
+    global REQUEST_COUNTER
+    global REQUEST_LATENCY
+    global WINDOW
     if str(request.url.path) != '/predict':
         response = await call_next(request)
         return response
     
 
     timestamp = datetime.datetime.now()
-    app.REQUEST_COUNTER.append(timestamp)
+    REQUEST_COUNTER.append(timestamp)
 
     
     start_time = datetime.datetime.now()
@@ -53,7 +55,10 @@ async def update_metrics(request, call_next):
 
 @app.get('/stats')
 async def get_stats(window: int = WINDOW):
-
+    global REQUEST_COUNTER
+    global REQUEST_LATENCY
+    global WINDOW
+    
     if window is not None and window <= 0:
         return {"windowail": "Window must be a positive integer greather than zero !"}
     
