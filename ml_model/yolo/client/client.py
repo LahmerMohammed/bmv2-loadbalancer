@@ -62,24 +62,6 @@ def get_pod_status(pod_name: str):
         return None
 
 
-kubernetes = KubernetesCLI()
-
-
-cpu_values = ["1500m", "2000m", "2500m", "3000m", "3500m", "4000m", "4500m", "5000m"]
-cpu_usage = []
-STOP_THREAD = False
-
-def save_pod_stats():
-    print("thread has started ...")
-    global cpu_usage
-    global STOP_THREAD
-    pod_metrics = kubernetes.get_pod_stat(POD_NAME)
-    while not STOP_THREAD:
-        if pod_metrics != None:
-            cpu_usage.append(pod_metrics["containers"][0]["usage"]["cpu"])
-        sleep(5)
-        pod_metrics = kubernetes.get_pod_stat(POD_NAME)
-
 def analyze_cpu_usage(cpu_usage_list):
     # Convert each usage value to an integer in nanocores
     cpu_usage_ints = [int(value.strip('n')) for value in cpu_usage_list]
@@ -93,16 +75,32 @@ def analyze_cpu_usage(cpu_usage_list):
     # Return the results as a tuple
     return (avg_cpu_usage, max_cpu_usage, min_cpu_usage)
 
+
+kubernetes = KubernetesCLI()
+
+
+cpu_values = ["1500m", "2000m", "2500m", "3000m", "3500m", "4000m", "4500m", "5000m"]
+cpu_usage = []
+
+def save_pod_stats(duration=40):
+    print("thread has started ...")
+    global cpu_usage
+    pod_metrics = kubernetes.get_pod_stat(POD_NAME)
+    start_time = time.time()
+    while time.time() - start_time < duration:
+        if pod_metrics != None:
+            cpu_usage.append(pod_metrics["containers"][0]["usage"]["cpu"])
+        sleep(5)
+        pod_metrics = kubernetes.get_pod_stat(POD_NAME)
+
 def main():
     global cpu_usage
-    global STOP_THREAD
     global cpu_values
     stats_file = open('stats.txt', 'a')
 
     for cpu in cpu_values:
         
-        thread = Thread(target=save_pod_stats)
-        # Delete pod if exist
+                # Delete pod if exist
         kubernetes.delete_pod(POD_NAME)
         print("Deleting pod {} ....".format(POD_NAME))
         while kubernetes.pod_exists(name=POD_NAME):
@@ -119,18 +117,15 @@ def main():
         while yolo_api_status == None:
             sleep(2)
             yolo_api_status = get_yolo_api_status()
-        print('The new pod was added successfully')
 
         print("Starting test load ....")
-        thread.start()
         try:
+            save_pod_stats(duration=45)
             subprocess.run(['locust', '-f', 'loadtest.py', '--headless',
                                      '--users', '10', '--spawn-rate', '10', '--run-time','50s',
-                                     '--host', yolo_service_endpoint, '--skip-log-setup', '--csv', 'locust.csv'], 
+                                     '--host', yolo_service_endpoint, '--skip-log-setup', '--csv', 'locust/locust.csv'], 
                                      check=True, capture_output=True, text=True)
             
-            STOP_THREAD = True
-            print("Thread has stopped")
         except subprocess.CalledProcessError as e:
             print(e.stderr)
 
@@ -139,7 +134,6 @@ def main():
         stats = get_stats(window=40).content
         print("stats: " + str(stats))
         stats_file.write("cpu: " + cpu + " : " + str(stats) + str(analyze_cpu_usage(cpu_usage)) + "\n")
-        print(cpu_usage[:3])
         cpu_usage = []
 
     stats_file.close()
