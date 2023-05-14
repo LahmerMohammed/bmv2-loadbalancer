@@ -125,7 +125,7 @@ def main():
         try:
             subprocess.run(['locust', '-f', 'loadtest.py', '--headless',
                                      '--users', '10', '--spawn-rate', '10', '--run-time','50s',
-                                     '--host', yolo_service_endpoint, '--skip-log-setup'], 
+                                     '--host', yolo_service_endpoint, '--skip-log-setup', '--csv', 'locust.csv'], 
                                      check=True, capture_output=True, text=True)
             
             STOP_THREAD = True
@@ -138,6 +138,7 @@ def main():
         stats = get_stats(window=40).content
 
         stats_file.write("cpu: " + cpu + " : " + str(stats) + str(analyze_cpu_usage(cpu_usage)) + "\n")
+        print(cpu_usage[:3])
         cpu_usage = []
 
     stats_file.close()
