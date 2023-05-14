@@ -86,7 +86,7 @@ def analyze_cpu_usage(cpu_usage_list):
 
     # Convert to millicores and calculate average, max, and min
     cpu_usage_millicores = [usage_int // 1000000 for usage_int in cpu_usage_ints]
-    avg_cpu_usage = sum(cpu_usage_millicores) / len(cpu_usage_millicores)
+    avg_cpu_usage = sum(cpu_usage_millicores) / len(cpu_usage_millicores) if len(cpu_usage_millicores) != 0 else -1
     max_cpu_usage = max(cpu_usage_millicores)
     min_cpu_usage = min(cpu_usage_millicores)
 
@@ -96,6 +96,7 @@ def analyze_cpu_usage(cpu_usage_list):
 def main():
     global cpu_usage
     global STOP_THREAD
+    global cpu_values
     stats_file = open('stats.txt', 'a')
 
     for cpu in cpu_values:
@@ -136,7 +137,7 @@ def main():
         print("Load test finished .")
         
         stats = get_stats(window=40).content
-
+        print("stats: " + str(stats))
         stats_file.write("cpu: " + cpu + " : " + str(stats) + str(analyze_cpu_usage(cpu_usage)) + "\n")
         print(cpu_usage[:3])
         cpu_usage = []
