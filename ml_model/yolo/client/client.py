@@ -6,6 +6,8 @@ from time import sleep
 import subprocess
 from k8s import KubernetesCLI
 import json
+import threading
+
 
 server_ip = "10.198.0.11"
 
@@ -120,7 +122,8 @@ def main():
 
         print("Starting test load ....")
         try:
-            save_pod_stats(duration=45)
+            thread = threading.Thread(target=save_pod_stats, args=(45))
+            thread.start()
             subprocess.run(['locust', '-f', 'loadtest.py', '--headless',
                                      '--users', '10', '--spawn-rate', '10', '--run-time','50s',
                                      '--host', yolo_service_endpoint, '--skip-log-setup', '--csv', 'locust/locust.csv'], 
