@@ -3,6 +3,7 @@ const http = require('http');
 const FormData = require('form-data');
 const loadtest = require('loadtest');
 
+const requestsPerSecond = process.argv[2];
 
 // Define the custom request generator function
 function requestGenerator(params, options, client, callback) {
@@ -54,10 +55,10 @@ const headers = formData.getHeaders();
 // Define the load testing options
 const options = {
   url: 'http://10.198.0.13:31977/predict?model=yolov3',
-  concurrency: 10,  // Number of requests to be made concurrently
+  concurrency: 1,  // Number of requests to be made concurrently
   requestGenerator: requestGenerator,
-  requestsPerSecond: 10,
-  maxSeconds: 100,
+  requestsPerSecond: requestsPerSecond,
+  maxSeconds: 30,
 
 };
 

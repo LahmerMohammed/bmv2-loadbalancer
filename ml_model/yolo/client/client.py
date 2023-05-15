@@ -82,7 +82,8 @@ def analyze_cpu_usage(cpu_usage_list):
 kubernetes = KubernetesCLI()
 
 
-cpu_values = ["1500m", "2000m", "2500m", "3000m", "3500m", "4000m", "4500m", "5000m"]
+cpu_values = ["1000m", "2000m", "3000m", "4000m"]
+rps_values = [1, 2, 4, 8, 16, 32]
 cpu_usage = []
 
 def save_pod_stats(duration=9):
@@ -99,45 +100,53 @@ def save_pod_stats(duration=9):
 def main():
     global cpu_usage
     global cpu_values
-    stats_file = open('stats.txt', 'a')
+    
 
-    for cpu in cpu_values:
-        
-                # Delete pod if exist
-        kubernetes.delete_pod(POD_NAME)
-        print("Deleting pod {} ....".format(POD_NAME))
-        while kubernetes.pod_exists(name=POD_NAME):
-            sleep(2)
-        
-        print("Pod {} was deleted successfully.".format(POD_NAME))
+    for rps in rps_values:
+        stats_file = open('stats.txt', 'a')
+        stats_file.write("\n\n")
+        stats_file.write("rps: " + str(rps) + "\n")
+        stats_file.close()
 
-        print('Running scenario: cpu = {}'.format(cpu))
+        for cpu in cpu_values:
+            stats_file = open('stats.txt', 'a')
+            # Delete pod if exist
+            kubernetes.delete_pod(POD_NAME)
+            print("Deleting pod {} ....".format(POD_NAME))
+            while kubernetes.pod_exists(name=POD_NAME):
+                sleep(2)
 
-        print('Adding pod with new cpu limits ...')
-        kubernetes.create_pod('../templates/pod.yaml', cpu=cpu)
-        yolo_api_status = get_yolo_api_status()
-        print('The pod isn\'t ready yet!')
-        while yolo_api_status == None:
-            sleep(2)
+            print("Pod {} was deleted successfully.".format(POD_NAME))
+
+            print('Running scenario: cpu = {}'.format(cpu))
+
+            print('Adding pod with new cpu limits ...')
+            kubernetes.create_pod('../templates/pod.yaml', cpu=cpu)
             yolo_api_status = get_yolo_api_status()
+            print('The pod isn\'t ready yet!')
+            while yolo_api_status == None:
+                sleep(2)
+                yolo_api_status = get_yolo_api_status()
 
-        print("Starting test load ....")
-        try:
-            thread = threading.Thread(target=save_pod_stats)
-            thread.start()
-            subprocess.run(['node', 'req_gen.js'], check=True, capture_output=True, text=True)
-            
-        except subprocess.CalledProcessError as e:
-            print(e.stderr)
+            print("Starting test load ....")
+            try:
+                thread = threading.Thread(target=save_pod_stats)
+                thread.start()
+                subprocess.run(['node', 'req_gen.js'], check=True, capture_output=True, text=True)
 
-        print("Load test finished .")
-        
-        stats = get_stats(window=9).content
-        print("stats: " + str(stats))
-        stats_file.write("cpu: " + cpu + " : " + str(stats) + str(analyze_cpu_usage(cpu_usage)) + "\n")
-        cpu_usage = []
+            except subprocess.CalledProcessError as e:
+                print(e.stderr)
 
-    stats_file.close()
+            print("Load test finished .")
+
+            stats = get_stats(window=9).content
+            print("stats: " + str(stats))
+            stats_file.write("cpu: " + cpu + " : " + str(stats) + str(analyze_cpu_usage(cpu_usage)) + "\n")
+            cpu_usage = []
+
+            stats_file.close()
+
+    
 
 
 if __name__ == '__main__':
