@@ -86,7 +86,7 @@ cpu_values = ["1000m", "2000m", "3000m", "4000m"]
 rps_values = [1, 2, 4, 8, 16, 32]
 cpu_usage = []
 
-def save_pod_stats(duration=9):
+def save_pod_stats(duration=25):
     print("thread has started ...")
     global cpu_usage
     pod_metrics = kubernetes.get_pod_stat(POD_NAME)
@@ -94,7 +94,7 @@ def save_pod_stats(duration=9):
     while time.time() - start_time < duration:
         if pod_metrics != None:
             cpu_usage.append(pod_metrics["containers"][0]["usage"]["cpu"])
-        sleep(5)
+        sleep(9)
         pod_metrics = kubernetes.get_pod_stat(POD_NAME)
 
 def main():
@@ -139,7 +139,7 @@ def main():
 
             print("Load test finished .")
 
-            stats = get_stats(window=9).content
+            stats = get_stats(window=25).content
             print("stats: " + str(stats))
             stats_file.write("cpu: " + cpu + " : " + str(stats) + str(analyze_cpu_usage(cpu_usage)) + "\n")
             cpu_usage = []
