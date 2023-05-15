@@ -25,8 +25,7 @@ class KubernetesCLI:
             data = response[0]
             return data
         except ApiException as e: 
-            if e.status != 404:
-                print(e)       
+            print(e)   
             return None
         
         

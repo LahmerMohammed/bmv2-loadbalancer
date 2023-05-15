@@ -100,6 +100,7 @@ cpu_values = ["1000m", "2000m", "3000m", "4000m"]
 rps_values = [1, 2, 4, 8, 16, 32]
 
 def save_pod_stats(cpu, rps, duration=25):
+    sleep(4)
     print("thread has started ...")
     cpu_usage = []
     mem_usage = []
@@ -111,7 +112,6 @@ def save_pod_stats(cpu, rps, duration=25):
             mem_usage.append(pod_metrics["containers"][0]["usage"]["memory"])
         sleep(5)
         pod_metrics = kubernetes.get_pod_stat(POD_NAME)
-        print("Pod metric: " , pod_metrics)
         
     stats_file = open('stats/rps-{}__cpu-{}.txt'.format(rps, cpu), 'a')
     stats_file.write("rps: " + rps + "__ cpu: " + cpu + "\n")
@@ -153,10 +153,10 @@ def main():
 
             print("Starting test load ....")
             try:
-                thread = threading.Thread(target=save_pod_stats)
+                thread = threading.Thread(target=save_pod_stats, args=(cpu, rps))
                 thread.start()
                 subprocess.run(['node', 'req_gen.js'], check=True, capture_output=True, text=True)
-
+                thread.join()
             except subprocess.CalledProcessError as e:
                 print(e.stderr)
 
