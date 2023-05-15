@@ -7,6 +7,7 @@ import subprocess
 from k8s import KubernetesCLI
 import json
 import threading
+import time
 
 
 server_ip = "10.198.0.11"
@@ -114,7 +115,7 @@ def main():
 
         print('Adding pod with new cpu limits ...')
         kubernetes.create_pod('../templates/pod.yaml', cpu=cpu)
-        yolo_api_status = get_yolo_api_status()
+        yolo_api_status = get_yolo_requestsPerSecondapi_status()
         print('The pod isn\'t ready yet!')
         while yolo_api_status == None:
             sleep(2)
@@ -124,10 +125,7 @@ def main():
         try:
             thread = threading.Thread(target=save_pod_stats, args=(45))
             thread.start()
-            subprocess.run(['locust', '-f', 'loadtest.py', '--headless',
-                                     '--users', '10', '--spawn-rate', '10', '--run-time','50s',
-                                     '--host', yolo_service_endpoint, '--skip-log-setup', '--csv', 'locust/locust.csv'], 
-                                     check=True, capture_output=True, text=True)
+            subprocess.run(['node', 'req_gen.js'], check=True, capture_output=True, text=True)
             
         except subprocess.CalledProcessError as e:
             print(e.stderr)

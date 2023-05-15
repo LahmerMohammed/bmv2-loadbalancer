@@ -32,9 +32,10 @@ function requestGenerator(params, options, client, callback) {
 // Define the load testing options
 const options = {
   url: 'http://10.198.0.13:31977/predict?model=yolov3',
-  maxRequests: 1,  // Total number of requests to be made
-  concurrency: 1,  // Number of requests to be made concurrently
+  maxRequests: 1200,  // Total number of requests to be made
+  concurrency: 2,  // Number of requests to be made concurrently
   requestGenerator: requestGenerator,
+  requestsPerSecond: 10
 };
 
 // Perform the load testing
