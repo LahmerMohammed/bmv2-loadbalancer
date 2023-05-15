@@ -3,6 +3,10 @@ const http = require('http');
 const FormData = require('form-data');
 const loadtest = require('loadtest');
 
+
+// Define the custom request generator function
+function requestGenerator(params, options, client, callback) {
+
 // Read the image file and convert it to a buffer
 const imagePath = 'images/cars.jpg';
 const imageBuffer = fs.readFileSync(imagePath);
@@ -19,12 +23,30 @@ formData.append('image', imageBuffer, {
 // Set the necessary headers for the API request
 const headers = formData.getHeaders();
 
-// Define the custom request generator function
-function requestGenerator(params, options, client, callback) {
+
+
   options.headers = headers;
   options.method = 'POST';
   
   const request = client(options, callback);
+  // Handle errors
+  request.on('error', (error) => {
+    console.error('Request error:', error);
+  });
+
+  // Handle the response
+  request.on('response', (response) => {
+    let data = '';
+
+    response.on('data', (chunk) => {
+      data += chunk;
+    });
+
+    response.on('end', () => {
+      console.log('Response:', response.statusCode, data);
+    });
+  });
+
   formData.pipe(request);
   return request;
 }
@@ -32,11 +54,52 @@ function requestGenerator(params, options, client, callback) {
 // Define the load testing options
 const options = {
   url: 'http://10.198.0.13:31977/predict?model=yolov3',
-  maxRequests: 1200,  // Total number of requests to be made
-  concurrency: 2,  // Number of requests to be made concurrently
+  concurrency: 10,  // Number of requests to be made concurrently
   requestGenerator: requestGenerator,
-  requestsPerSecond: 10
+  requestsPerSecond: 10,
+  maxSeconds: 100,
+
 };
+
+/*
+
+// Define the custom request generator function
+function requestGenerator(params, options, client, callback) {
+  options.method = 'GET';
+
+  const request = client(options, callback);
+
+  // Handle errors
+  request.on('error', (error) => {
+    console.error('Request error:', error);
+  });
+
+  // Handle the response
+  request.on('response', (response) => {
+    let data = '';
+
+    response.on('data', (chunk) => {
+      data += chunk;
+    });
+
+    response.on('end', () => {
+      console.log('Response:', response.statusCode, data);
+    });
+  });
+
+  return request;
+}
+
+// Define the load testing options
+const options = {
+  url: 'http://10.198.0.13:31977/health',
+  maxSeconds: 10,  // Total number of requests to be made
+  concurrency: 10,  // Number of requests to be made concurrently
+  requestGenerator: requestGenerator,
+  requestsPerSecond: 10,
+};
+
+*/
 
 // Perform the load testing
 loadtest.loadTest(options, function (error, result) {

@@ -123,7 +123,7 @@ def main():
 
         print("Starting test load ....")
         try:
-            thread = threading.Thread(target=save_pod_stats, args=(45))
+            thread = threading.Thread(target=save_pod_stats)
             thread.start()
             subprocess.run(['node', 'req_gen.js'], check=True, capture_output=True, text=True)
             
