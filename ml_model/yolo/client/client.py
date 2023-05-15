@@ -72,11 +72,25 @@ def analyze_cpu_usage(cpu_usage_list):
     # Convert to millicores and calculate average, max, and min
     cpu_usage_millicores = [usage_int // 1000000 for usage_int in cpu_usage_ints]
     avg_cpu_usage = sum(cpu_usage_millicores) / len(cpu_usage_millicores) if len(cpu_usage_millicores) != 0 else -1
-    max_cpu_usage = max(cpu_usage_millicores)
-    min_cpu_usage = min(cpu_usage_millicores)
+    max_cpu_usage = max(cpu_usage_millicores) if len(cpu_usage_millicores) != 0 else -1
+    min_cpu_usage = min(cpu_usage_millicores) if len(cpu_usage_millicores) != 0 else -1
 
     # Return the results as a tuple
     return (avg_cpu_usage, max_cpu_usage, min_cpu_usage)
+
+
+def analyze_memory_usage(memory_usage_list):
+    # Convert each usage value to an integer in bytes
+    memory_usage_ints = [int(value.strip('Mi')) * 1024 * 1024 for value in memory_usage_list]
+
+    # Convert to megabytes and calculate average, max, and min
+    memory_usage_megabytes = [usage_int // (1024 * 1024) for usage_int in memory_usage_ints]
+    avg_memory_usage = sum(memory_usage_megabytes) // len(memory_usage_megabytes) if len(memory_usage_megabytes) != 0 else -1
+    max_memory_usage = max(memory_usage_megabytes) if len(memory_usage_megabytes) != 0 else -1
+    min_memory_usage = min(memory_usage_megabytes) if len(memory_usage_megabytes) != 0 else -1
+
+    # Return the results as a tuple
+    return avg_memory_usage, max_memory_usage, min_memory_usage
 
 
 kubernetes = KubernetesCLI()
@@ -84,22 +98,31 @@ kubernetes = KubernetesCLI()
 
 cpu_values = ["1000m", "2000m", "3000m", "4000m"]
 rps_values = [1, 2, 4, 8, 16, 32]
-cpu_usage = []
 
-def save_pod_stats(duration=25):
+def save_pod_stats(cpu, rps, duration=25):
     print("thread has started ...")
-    global cpu_usage
+    cpu_usage = []
+    mem_usage = []
     pod_metrics = kubernetes.get_pod_stat(POD_NAME)
     start_time = time.time()
     while time.time() - start_time < duration:
         if pod_metrics != None:
             cpu_usage.append(pod_metrics["containers"][0]["usage"]["cpu"])
-        sleep(9)
+            mem_usage.append(pod_metrics["containers"][0]["usage"]["memory"])
+        sleep(5)
         pod_metrics = kubernetes.get_pod_stat(POD_NAME)
+        print("Pod metric: " , pod_metrics)
+        
+    stats_file = open('stats/rps-{}__cpu-{}.txt'.format(rps, cpu), 'a')
+    stats_file.write("rps: " + rps + "__ cpu: " + cpu + "\n")
+    stats_file.write("cpu_usage: " + str(analyze_cpu_usage(cpu_usage)) + "\n")
+    stats_file.write("mem_usage: " + str(analyze_memory_usage(mem_usage)) + "\n")
+    stats_file.close()
+
 
 def main():
-    global cpu_usage
     global cpu_values
+    global rps_values
     
 
     for rps in rps_values:
@@ -141,8 +164,7 @@ def main():
 
             stats = get_stats(window=25).content
             print("stats: " + str(stats))
-            stats_file.write("cpu: " + cpu + " : " + str(stats) + str(analyze_cpu_usage(cpu_usage)) + "\n")
-            cpu_usage = []
+            stats_file.write("cpu: " + cpu + " : " + str(stats) + "\n")
 
             stats_file.close()
 
