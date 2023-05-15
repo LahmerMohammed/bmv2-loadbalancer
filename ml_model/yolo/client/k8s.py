@@ -22,11 +22,11 @@ class KubernetesCLI:
         # response shape: tuple(data, http-status, http-header)
             response = self.api_client.call_api(
                 endpoint, "GET", response_type="object")
-            print(response)
             data = response[0]
             return data
         except ApiException as e: 
-            print(e)       
+            if e.status != 404:
+                print(e)       
             return None
         
         

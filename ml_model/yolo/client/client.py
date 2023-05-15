@@ -85,7 +85,7 @@ kubernetes = KubernetesCLI()
 cpu_values = ["1500m", "2000m", "2500m", "3000m", "3500m", "4000m", "4500m", "5000m"]
 cpu_usage = []
 
-def save_pod_stats(duration=40):
+def save_pod_stats(duration=9):
     print("thread has started ...")
     global cpu_usage
     pod_metrics = kubernetes.get_pod_stat(POD_NAME)
@@ -115,7 +115,7 @@ def main():
 
         print('Adding pod with new cpu limits ...')
         kubernetes.create_pod('../templates/pod.yaml', cpu=cpu)
-        yolo_api_status = get_yolo_requestsPerSecondapi_status()
+        yolo_api_status = get_yolo_api_status()
         print('The pod isn\'t ready yet!')
         while yolo_api_status == None:
             sleep(2)
@@ -132,7 +132,7 @@ def main():
 
         print("Load test finished .")
         
-        stats = get_stats(window=40).content
+        stats = get_stats(window=9).content
         print("stats: " + str(stats))
         stats_file.write("cpu: " + cpu + " : " + str(stats) + str(analyze_cpu_usage(cpu_usage)) + "\n")
         cpu_usage = []
