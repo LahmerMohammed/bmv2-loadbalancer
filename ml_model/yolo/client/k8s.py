@@ -57,6 +57,7 @@ class KubernetesCLI:
 
         try:        
             response = self.api_instance.create_namespaced_pod(body=pod_yaml, namespace=namespace)
+            return response
         except ApiException as e:
             return None
 

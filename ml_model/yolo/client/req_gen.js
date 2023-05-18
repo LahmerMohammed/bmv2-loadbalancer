@@ -55,10 +55,10 @@ const headers = formData.getHeaders();
 // Define the load testing options
 const options = {
   url: 'http://10.198.0.13:31977/predict?model=yolov3',
-  concurrency: 1,  // Number of requests to be made concurrently
+  concurrency: requestsPerSecond, 
   requestGenerator: requestGenerator,
   requestsPerSecond: requestsPerSecond,
-  maxSeconds: 30,
+  maxSeconds: 100,
 
 };
 

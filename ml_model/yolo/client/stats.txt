@@ -1,2 +1,1 @@
-
-cpu: 1500m : b'{"request_rate":0.75,"request_latency":7.890419}'(872.0, 872, 872)
+rps cpu_limit req_rate req_latency cpu min_cpu max_cpu cpu0 cpu1 cpu2 cpu3 cpu4 cpu5 cpu6 

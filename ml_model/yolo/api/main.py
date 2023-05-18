@@ -60,7 +60,7 @@ async def get_stats(window: int = WINDOW):
     global WINDOW
 
     if window is not None and window <= 0:
-        return {"windowail": "Window must be a positive integer greather than zero !"}
+        return {"window": "Window must be a positive integer greather than zero !"}
     
     starting_from = datetime.datetime.now() - datetime.timedelta(seconds=window) 
     
@@ -80,8 +80,8 @@ async def get_stats(window: int = WINDOW):
     
     
     return {
-        "request_rate": request_rate / window,
-        "request_latency": 0 if len(request_latency) == 0 else  sum(request_latency) / len(request_latency)
+        "request_rate": round(request_rate / window, 2),
+        "request_latency": -1 if len(request_latency) == 0 else  round(sum(request_latency) / len(request_latency), 2)
     }
 
 @app.get("/health")
@@ -118,10 +118,3 @@ async def predict(model: Model, image: UploadFile):
 
     # Return objects detected in the image
     return response
-
-
-"""
-cpu_usage
-avg_latency
-drop_rate
-"""
