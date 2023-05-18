@@ -23,15 +23,12 @@ pod_slice_dirs = [dir for dir in os.listdir(
 
 def get_pod_per_cpu_stat(pod_path: str, cpu_quota_s, cpu_period_s, interval_resolution_s=1):
     per_cpu_usage_path = 'cpuacct.usage_percpu'
-    cpu_usage_path = 'cpuacct.usage'
     
     with open(os.path.join(pod_path, per_cpu_usage_path), 'r') as f:
         start_s = time.time()
         initial_per_cpu_usage_s = [
             float(x)/1000_000_000 for x in f.read().strip().split(' ')]
         
-    with open(os.path.join(pod_path, cpu_usage_path), 'r') as f:
-        initial_cpu_usage_s = float(f.read().strip()) / 1000_000_000
 
     time.sleep(interval_resolution_s)
 
@@ -40,12 +37,8 @@ def get_pod_per_cpu_stat(pod_path: str, cpu_quota_s, cpu_period_s, interval_reso
         updated_per_cpu_usage_s = [
             float(x)/1000_000_000 for x in f.read().strip().split(' ')]
         
-    with open(os.path.join(pod_path, cpu_usage_path), 'r') as f:
-        updated_cpu_usage_s = float(f.read().strip()) / 1000_000_000
 
     elapsed_time_s = end_s - start_s
-
-    cpu_usage_percentage = (updated_cpu_usage_s - initial_cpu_usage_s) * cpu_period_s / elapsed_time_s / cpu_quota_s * 100
     per_cpu_usage_percentage = []
 
     for i in range(len(initial_per_cpu_usage_s)):
@@ -54,7 +47,7 @@ def get_pod_per_cpu_stat(pod_path: str, cpu_quota_s, cpu_period_s, interval_reso
              ) * cpu_period_s / elapsed_time_s / cpu_quota_s * 100
         )
     
-    return (cpu_usage_percentage, per_cpu_usage_percentage)
+    return per_cpu_usage_percentage
 
 
 def scrape_pod_cpu_memory_usage():
@@ -92,7 +85,7 @@ def scrape_pod_cpu_memory_usage():
                 cpu_period_s=cpu_period_s, cpu_quota_s=cpu_quota_s, 
                 pod_path=pod_path, interval_resolution_s=0.5)
             timestamp = time.time()
-            STATS[pod_id].append((timestamp, per_cpu_stat[0], per_cpu_stat[1]))
+            STATS[pod_id].append((timestamp, per_cpu_stat))
         except FileNotFoundError:
             if pod_id in STATS:
                 STATS.pop(pod_id)
@@ -122,27 +115,23 @@ def get_stats(pod_id: str, window: int):
 
     # Filter the data within the window
     current_time = time.time()
-    filtered_data = [(cpu, per_cpu) for ts, cpu, per_cpu in data if current_time - ts <= window]
+    filtered_data = [per_cpu for ts, per_cpu in data if current_time - ts <= window]
     if not filtered_data:
         raise HTTPException(
             status_code=404, detail="No data found for the specified window")
 
     # Extract CPU and memory usage values from the filtered data
     avg_per_cpu_usage_values = []
-    per_cpu_usage_data = [per_cpu for cpu, per_cpu in filtered_data ]
-    cpu_usage_data = [cpu for cpu, per_cpu in filtered_data ]
 
     num_cpu = len(filtered_data[0])
     num_items = len(filtered_data)
     for i in range(num_cpu):
         avg_per_cpu_usage_values.append(round(
-            sum(subarr[i] for subarr in per_cpu_usage_data) / num_items, 1))
+            sum(subarr[i] for subarr in filtered_data) / num_items, 1))
     
-    cpu_usage = round(sum(cpu_usage_data) / len(cpu_usage_data), 1)
-
     return {
         'per_cpu_usage': avg_per_cpu_usage_values,
-        'cpu_usage': cpu_usage 
+        'cpu_usage': sum(avg_per_cpu_usage_values) 
     }
 
 def on_shutdown():
