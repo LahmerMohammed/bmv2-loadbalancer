@@ -2,11 +2,12 @@ FROM python:3.10
 RUN apt-get update \
     && apt-get install -y libglvnd-dev mesa-utils ffmpeg libsm6 libxext6 \
     && rm -rf /var/lib/apt/lists/*
+
+
 WORKDIR /app
 COPY . /app
-RUN python3 -m venv venv \
-    && . venv/bin/activate \
-    && pip3 install -r requirements.txt \
+
+RUN pip3 install -r requirements.txt \
     && mkdir -p /root/.cvlib/object_detection/yolo/yolov3 \
     && yolo_path=/root/.cvlib/object_detection/yolo/yolov3 \
     && wget https://pjreddie.com/media/files/yolov3.weights -O ${yolo_path}/yolov3.weights \

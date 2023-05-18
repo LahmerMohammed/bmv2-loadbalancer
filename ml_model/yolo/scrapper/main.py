@@ -1,24 +1,25 @@
 import os
 import time
 import re
-import psutil
 from fastapi import FastAPI, HTTPException
-import asyncio
-
+import threading
+import signal
+import sys
 
 app = FastAPI()
 
 STATS = {}
+STOP_THREAD = False
+
 
 pod_id_regex = r'.*pod(.{0,})'
 # pod_dir = '/sys/fs/cgroup/cpu/kubepods.slice/kubepods-burstable.slice/kubepods-burstable-pod077177ed_0ed7_40e0_8106_cda5a55c9a18.slice/'
 
-cpu_cgroup_dir = '/sys/fs/cgroup/cpuacct/kubepods.slice/'
+cpu_cgroup_dir = '/sys/fs/cgroup/cpuacct/kubepods'
 memory_cgroup_dir = '/sys/fs/cgroup/memory/memory.usage_in_bytes'
 
 pod_slice_dirs = [dir for dir in os.listdir(
-    cpu_cgroup_dir) if dir.startswith('kubepods')]
-
+    cpu_cgroup_dir) if dir.startswith('besteffort') or dir.startswith('burstable') ]
 
 def get_pod_per_cpu_stat(pod_path: str, cpu_quota_s, cpu_period_s, interval_resolution_s=1):
     cpu_usage_path = 'cpuacct.usage_percpu'
@@ -59,10 +60,10 @@ def scrape_pod_cpu_memory_usage():
     for dir in pod_slice_dirs:
         pds = os.listdir(os.path.join(cpu_cgroup_dir, dir))
         pod_dirs.extend([os.path.join(dir, pod_dir)
-                        for pod_dir in pds if re.match(r'kubepods-.*-pod.*', pod_dir)])
+                        for pod_dir in pds if re.match(r'pod.*', pod_dir)])
 
     for pod_dir in pod_dirs:
-        pod_id = pod_dir.split('/')[1].split('.')[0].split('-pod')[1]
+        pod_id = pod_dir.split('/')[1].split('.')[0].split('pod')[1]
         pod_path = os.path.join(cpu_cgroup_dir, pod_dir)
 
         with open(os.path.join(pod_path, 'cpu.cfs_quota_us'), 'r') as f:
@@ -76,25 +77,31 @@ def scrape_pod_cpu_memory_usage():
 
         if pod_id not in STATS:
             STATS[pod_id] = []
+        
 
         per_cpu_stat = get_pod_per_cpu_stat(
             cpu_period_s=cpu_period_s, cpu_quota_s=cpu_quota_s, 
-            pod_path=pod_path, interval_resolution_s=0.01)
+            pod_path=pod_path, interval_resolution_s=0.5)
         timestamp = time.time()
         STATS[pod_id].append((timestamp, per_cpu_stat))
 
 
-async def periodic_scrapping():
-    while True:
-        scrape_pod_cpu_memory_usage()
-        await asyncio.sleep(0.01)
 
+def every(delay, task):
+  try:
+    while not STOP_THREAD:
+        time.sleep(delay)
+        try:
+            task()
+        except Exception:
+            traceback.print_exc()
+  except KeyboardInterrupt:
+    print("Ctrl+C detected. Stopping the thread...")
+    sys.exit(0)   
 
 @app.on_event("startup")
 async def startup_event():
-    loop = asyncio.get_event_loop()
-    task = loop.create_task(periodic_scrapping())
-    loop.run_until_complete(task)
+    threading.Thread(target=lambda: every(0.5, scrape_pod_cpu_memory_usage)).start()
 
 
 # Endpoint to retrieve CPU and memory stats
@@ -106,7 +113,6 @@ def get_stats(pod_id: str, window: int):
     # Filter the data within the window
     current_time = time.time()
     filtered_data = [cpu for ts, cpu in data if current_time - ts <= window]
-
     if not filtered_data:
         raise HTTPException(
             status_code=404, detail="No data found for the specified window")
@@ -132,3 +138,12 @@ def get_stats(pod_id: str, window: int):
         'min_cpu_usage': round(sum(min_per_cpu_usage_values) / len(min_per_cpu_usage_values), 2),
         'max_cpu_usage': round(sum(max_per_cpu_usage_values) / len(max_per_cpu_usage_values), 2)
     }
+
+def on_shutdown():
+    print("Shutting down the application...")
+    STOP_THREAD = True
+
+import atexit
+
+# Register the on_shutdown function with atexit
+atexit.register(on_shutdown)
