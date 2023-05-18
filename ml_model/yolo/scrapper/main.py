@@ -19,11 +19,11 @@ cpu_cgroup_dir = '/sys/fs/cgroup/cpuacct/kubepods'
 memory_cgroup_dir = '/sys/fs/cgroup/memory/memory.usage_in_bytes'
 
 pod_slice_dirs = [dir for dir in os.listdir(
-    cpu_cgroup_dir) if dir.startswith('besteffort') or dir.startswith('burstable') ]
+    cpu_cgroup_dir) if dir.startswith('burstable') ]
 
 def get_pod_per_cpu_stat(pod_path: str, cpu_quota_s, cpu_period_s, interval_resolution_s=1):
     cpu_usage_path = 'cpuacct.usage_percpu'
-
+    
     with open(os.path.join(pod_path, cpu_usage_path), 'r') as f:
         start_s = time.time()
         initial_per_cpu_usage_s = [
@@ -43,9 +43,9 @@ def get_pod_per_cpu_stat(pod_path: str, cpu_quota_s, cpu_period_s, interval_reso
     for i in range(len(initial_per_cpu_usage_s)):
         per_cpu_usage_percentage.append(
             (updated_per_cpu_usage_s[i] - initial_per_cpu_usage_s[i]
-             ) * cpu_period_s / elapsed_time_s / cpu_quota_s
+             ) * cpu_period_s / elapsed_time_s / cpu_quota_s * 100
         )
-
+    
     return per_cpu_usage_percentage
 
 
@@ -61,40 +61,42 @@ def scrape_pod_cpu_memory_usage():
         pds = os.listdir(os.path.join(cpu_cgroup_dir, dir))
         pod_dirs.extend([os.path.join(dir, pod_dir)
                         for pod_dir in pds if re.match(r'pod.*', pod_dir)])
-
+    
     for pod_dir in pod_dirs:
         pod_id = pod_dir.split('/')[1].split('.')[0].split('pod')[1]
         pod_path = os.path.join(cpu_cgroup_dir, pod_dir)
+        
+        try:
+            with open(os.path.join(pod_path, 'cpu.cfs_quota_us'), 'r') as f:
+                cpu_quota_s = float(f.read().strip()) / 1000_000
 
-        with open(os.path.join(pod_path, 'cpu.cfs_quota_us'), 'r') as f:
-            cpu_quota_s = float(f.read().strip()) / 1000_000
+            if cpu_quota_s <= 0:
+                continue
 
-        if cpu_quota_s <= 0:
-            continue
-
-        with open(os.path.join(pod_path, 'cpu.cfs_period_us'), 'r') as f:
-            cpu_period_s = float(f.read().strip()) / 1000_000
-
-        if pod_id not in STATS:
-            STATS[pod_id] = []
+            with open(os.path.join(pod_path, 'cpu.cfs_period_us'), 'r') as f:
+                cpu_period_s = float(f.read().strip()) / 1000_000
+        
+            if pod_id not in STATS:
+                STATS[pod_id] = []
         
 
-        per_cpu_stat = get_pod_per_cpu_stat(
-            cpu_period_s=cpu_period_s, cpu_quota_s=cpu_quota_s, 
-            pod_path=pod_path, interval_resolution_s=0.5)
-        timestamp = time.time()
-        STATS[pod_id].append((timestamp, per_cpu_stat))
+            per_cpu_stat = get_pod_per_cpu_stat(
+                cpu_period_s=cpu_period_s, cpu_quota_s=cpu_quota_s, 
+                pod_path=pod_path, interval_resolution_s=0.5)
+            timestamp = time.time()
+            STATS[pod_id].append((timestamp, per_cpu_stat))
+        except FileNotFoundError:
+            if pod_id in STATS:
+                STATS.pop(pod_id)
+            continue
 
 
 
 def every(delay, task):
   try:
     while not STOP_THREAD:
+        task()
         time.sleep(delay)
-        try:
-            task()
-        except Exception:
-            traceback.print_exc()
   except KeyboardInterrupt:
     print("Ctrl+C detected. Stopping the thread...")
     sys.exit(0)   
@@ -125,18 +127,16 @@ def get_stats(pod_id: str, window: int):
     num_cpu = len(filtered_data[0])
     num_items = len(filtered_data)
     for i in range(num_cpu):
-        avg_per_cpu_usage_values.append(
-            sum(round(subarr[i], 2) for subarr in filtered_data) / num_items)
-        min_per_cpu_usage_values.append(
-            min(subarr[i] for subarr in filtered_data))
-        max_per_cpu_usage_values.append(
-            max(subarr[i] for subarr in filtered_data))
+        avg_per_cpu_usage_values.append(round(
+            sum(subarr[i] for subarr in filtered_data) / num_items, 1))
+    
+    cpu_usage = [sum(subarr)/len(subarr) for subarr in filtered_data]
 
     return {
         'per_cpu_usage': avg_per_cpu_usage_values,
-        'cpu_usage': round(sum(avg_per_cpu_usage_values) / len(avg_per_cpu_usage_values), 2),
-        'min_cpu_usage': round(sum(min_per_cpu_usage_values) / len(min_per_cpu_usage_values), 2),
-        'max_cpu_usage': round(sum(max_per_cpu_usage_values) / len(max_per_cpu_usage_values), 2)
+        'cpu_usage': round(sum(cpu_usage)/len(cpu_usage), 1),
+        'min_cpu_usage': min(cpu_usage) ,
+        'max_cpu_usage': max(cpu_usage)
     }
 
 def on_shutdown():

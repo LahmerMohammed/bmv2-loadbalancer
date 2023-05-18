@@ -4,5 +4,5 @@ python3.10 -m venv venv
 
 pip3 install -r requirements.txt
 
-uvicorn main:app --reload --host 0.0.0.0 --port 10000
+uvicorn main:app --reload --host 0.0.0.0 --port 10001
 
