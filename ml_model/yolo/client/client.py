@@ -51,25 +51,10 @@ def get_yolo_api_status():
         return response.json()
     except requests.exceptions.RequestException as e:
         return None
-
-
-def get_pod_status(pod_name: str):
-    url = "http://{}:14000/pods/{}/status".format(server_ip, pod_name)
-
-    # Send a GET request to the server
-    response = requests.get(url)
-
-    # Check the status code of the response
-    if response.status_code == 200:
-        # If the response is successful, print the status of the pod
-        print(f"Pod status: {response.json()['status']}")
-    else:
-        # If the response is not successful, print the error message
-        return None
-
+    
 
 def get_pod_stats(pod_id: str, window: int):
-    url = f"http://:9000/stats/{pod_id}?window={window}"
+    url = f"http://10.198.0.11:9000/stats/{pod_id}?window={window}"
 
     try:
         # Send a GET request to the server
@@ -77,6 +62,7 @@ def get_pod_stats(pod_id: str, window: int):
         return response.json()
     except requests.exceptions.RequestException as e:
         print(e)
+        return None
 
 
 kubernetes = KubernetesCLI()
