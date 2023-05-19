@@ -1,38 +1,49 @@
 import matplotlib.pyplot as plt
 
 # Read data from file
-with open('data.txt', 'r') as f:
-    data = f.readlines()
-data = [line.strip().split() for line in data]
+with open('stats.txt', 'r') as f:
+    lines = f.readlines()
 
-# Convert data to floats
-data = [[float(x) for x in line] for line in data]
+columns = lines[0].strip().split(' ')
+    
+# Initialize empty lists for each column
+data = {column: [] for column in columns}
 
 
+def plot_num_vCpu_vs_cpu_usage():
 
-# Extract columns
-cpu = [line[0] for line in data]
-request_rate = [line[1] for line in data]
-request_latency = [line[2] for line in data]
+    # Extract data values from subsequent entries
+    for line in lines[1:]:
+        values = line.split()
+        for column, value in zip(columns, values):
+            data[column].append(float(value))
 
-# Create a continuous line plot for request rate
-fig, ax = plt.subplots()
-ax.plot(cpu, request_rate, label='Request Rate', color='green')
+    # Define color mapping for RPS values
+    color_mapping = {1: 'green', 2: 'red', 4: 'blue', 8: 'black'}
 
-# Create a continuous line plot for request latency
-ax.plot(cpu, request_latency, label='Request Latency', color='blue')
 
-# Set plot title and axis labels
-ax.set_title('CPU vs Request Latency/Rate')
-ax.set_xlabel('CPU (millicores)')
-ax.set_ylabel('Request Latency (s) / Request Rate (req/s)')
+    for _rps in set(data["rps"]):
+        filtered_data = {
+            'cpu_limit': [cpu_limit for rps, cpu_limit in zip(data['rps'], data['cpu_limit']) if rps == _rps],
+            'cpu': [cpu for rps, cpu in zip(data['rps'], data['cpu']) if rps == _rps]
+        }
+        plt.plot(filtered_data['cpu_limit'], filtered_data['cpu'], color=color_mapping[_rps])
 
-# Add a horizontal line at y=25 to represent 25 requests per second
-#ax.axhline(y=25, color='red', linestyle='--', label='Target Request Rate')
 
-# Add legend and grid lines
-ax.legend()
-ax.grid(True)
+    # Adding labels and title
+    plt.xlabel('#vCpu')
+    plt.ylabel('Cpu usage %')
+    plt.title('Cpu usage vs #vCpu')
 
-# Show plot
-plt.show()
+    plt.ylim(0, 110)
+    plt.xlim(1, 4)
+
+    # Create legend based on color mapping
+    legend_labels = [f'RPS = {rps}' for rps in color_mapping.keys()]
+    legend_colors = list(color_mapping.values())
+    plt.legend(legend_labels, loc='best', title='Legend', markerscale=1, frameon=True, facecolor='white', edgecolor='black', bbox_to_anchor=(1.02, 1))
+
+
+    # Display the plot
+    plt.show()
+

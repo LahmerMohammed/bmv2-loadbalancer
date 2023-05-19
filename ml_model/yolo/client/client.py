@@ -14,7 +14,7 @@ server_ip = "10.198.0.11"
 
 images = ['images/cars.jpg']
 
-yolo_service_endpoint = "http://{}:31977".format(server_ip)
+yolo_service_endpoint = "http://{}:30946".format(server_ip)
 
 POD_NAME = "yolo-v3"
 
@@ -77,11 +77,6 @@ def main():
     global rps_values
 
     for rps in rps_values:
-        stats_file = open('stats.txt', 'a')
-        stats_file.write("\n\n")
-        stats_file.write("rps: " + str(rps) + "\n")
-        stats_file.close()
-
         for cpu in cpu_values:
             stats_file = open('stats.txt', 'a')
             # Delete pod if exist
@@ -97,10 +92,10 @@ def main():
             print('Adding pod with new cpu limits ...')
             response = kubernetes.create_pod('../templates/pod.yaml', cpu=cpu)
 
-            pod_id = response["metadata"]["uid"]
+            pod_id = response.metadata.uid
 
             yolo_api_status = get_yolo_api_status()
-            print('The pod isn\'t ready yet!')
+            print(f"The pod --{pod_id}-- isn\'t ready yet!")
             while yolo_api_status == None:
                 sleep(2)
                 yolo_api_status = get_yolo_api_status()
@@ -124,9 +119,7 @@ def main():
                 yolo_api_stats["request_rate"], 
                 yolo_api_stats["request_latency"], 
                 pod_stats["cpu_usage"],
-                pod_stats["min_cpu_usage"],
-                pod_stats["max_cpu_usage"],
-                "".join(pod_stats["per_cpu_usage"])
+                " ".join(map(str, pod_stats["per_cpu_usage"]))
                 )
             )
 
