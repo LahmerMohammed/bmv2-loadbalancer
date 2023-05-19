@@ -114,7 +114,7 @@ def main():
             yolo_api_stats = get_yolo_api_stats(window=25)
             pod_stats = get_pod_stats(pod_id=pod_id, window=25)
 
-            stats_file.write("{} {} {} {} {} {} {} {}".format(
+            stats_file.write("{} {} {} {} {} {} {} {} {}".format(
                 rps, cpu, 
                 yolo_api_stats["request_rate"], 
                 yolo_api_stats["request_latency"], 
