@@ -32,7 +32,7 @@ async def update_metrics(request, call_next):
     global REQUEST_COUNTER
     global REQUEST_LATENCY
     global WINDOW
-    if str(request.url.path) != '/predict':
+    if str(request.url.path) != '/health':
         response = await call_next(request)
         return response
     
