@@ -24,7 +24,8 @@ pod_slice_dirs = [dir for dir in os.listdir(
 
 def get_pod_per_cpu_stat(pod_path: str, cpu_quota_s, cpu_period_s, interval_resolution_s=1):
     per_cpu_usage_path = 'cpuacct.usage_percpu'
-    memory_usage_path = "memory.usage_in_bytes" 
+    memory_usage_path = "memory.usage_in_bytes"
+    memory_limit_path = "memory.limit_in_bytes" 
 
     with open(os.path.join(pod_path, per_cpu_usage_path), 'r') as f:
         start_s = time.time()
@@ -40,7 +41,12 @@ def get_pod_per_cpu_stat(pod_path: str, cpu_quota_s, cpu_period_s, interval_reso
             float(x)/1000_000_000 for x in f.read().strip().split(' ')]
     
     with open(os.path.join(pod_path.replace('cpuacct', 'memory'), memory_usage_path), 'r') as f:
-        memory_usage_kb = float(f.read().strip()) / 1000
+        memory_usage_b = float(f.read().strip())
+
+    with open(os.path.join(pod_path.replace('cpuacct', 'memory'), memory_limit_path), 'r') as f:
+        memory_limit_b = float(f.read().strip())
+
+    memory_usage_percentage = memory_usage_b / memory_limit_b * 100
 
     elapsed_time_s = end_s - start_s
     per_cpu_usage_percentage = []
@@ -51,7 +57,7 @@ def get_pod_per_cpu_stat(pod_path: str, cpu_quota_s, cpu_period_s, interval_reso
              ) * cpu_period_s / elapsed_time_s / cpu_quota_s * 100
         )
     
-    return (per_cpu_usage_percentage, memory_usage_kb)
+    return (per_cpu_usage_percentage, memory_usage_percentage)
 
 
 def scrape_pod_cpu_memory_usage():
@@ -85,11 +91,11 @@ def scrape_pod_cpu_memory_usage():
                 STATS[pod_id] = []
         
 
-            per_cpu_stat, mem_sta = get_pod_per_cpu_stat(
+            per_cpu_usage_percentage, memory_usage_percentage = get_pod_per_cpu_stat(
                 cpu_period_s=cpu_period_s, cpu_quota_s=cpu_quota_s, 
                 pod_path=pod_path, interval_resolution_s=0.5)
             timestamp = time.time()
-            STATS[pod_id].append((timestamp, per_cpu_stat, mem_sta))
+            STATS[pod_id].append((timestamp, per_cpu_usage_percentage, memory_usage_percentage))
         except FileNotFoundError:
             if pod_id in STATS:
                 STATS.pop(pod_id)
@@ -140,7 +146,7 @@ def get_stats(pod_id: str, window: int):
     return {
         'per_cpu_usage': avg_per_cpu_usage_values,
         'cpu_usage': sum(avg_per_cpu_usage_values),
-        'mem_usage': sum(mem_data) / len(mem_data)
+        'memory_usage': sum(mem_data) / len(mem_data)
     }
 
 def on_shutdown():

@@ -120,7 +120,8 @@ def main():
                 yolo_api_stats["request_latency"], 
                 pod_stats["cpu_usage"],
                 " ".join(map(str, pod_stats["per_cpu_usage"]))
-                )
+                ),
+                pod_stats["memory_usage"]
             )
 
             stats_file.close()
