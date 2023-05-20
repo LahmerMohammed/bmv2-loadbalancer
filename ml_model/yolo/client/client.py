@@ -10,11 +10,11 @@ import threading
 import time
 
 
-server_ip = "10.198.0.11"
+server_ip = "128.110.218.25"
 
 images = ['images/cars.jpg']
 
-yolo_service_endpoint = "http://{}:30946".format(server_ip)
+yolo_service_endpoint = "http://{}:31334".format(server_ip)
 
 POD_NAME = "yolo-v3"
 
@@ -54,7 +54,7 @@ def get_yolo_api_status():
     
 
 def get_pod_stats(pod_id: str, window: int):
-    url = f"http://10.198.0.11:10001/stats/{pod_id}?window={window}"
+    url = f"http://128.110.218.25:10001/stats/{pod_id}?window={window}"
 
     try:
         # Send a GET request to the server
@@ -68,8 +68,8 @@ def get_pod_stats(pod_id: str, window: int):
 kubernetes = KubernetesCLI()
 
 
-cpu_values = ["1000m", "2000m", "3000m", "4000m"]
-rps_values = [1, 2, 3, 4, 5, 6] * 100
+cpu_values = ["15000m"]
+rps_values = [10]
 
 
 def main():
@@ -78,7 +78,7 @@ def main():
 
     for rps in rps_values:
         for cpu in cpu_values:
-            stats_file = open('model_data.txt', 'a')
+            stats_file = open('stats.txt', 'a')
             # Delete pod if exist
             kubernetes.delete_pod(POD_NAME)
             print("Deleting pod {} ....".format(POD_NAME))
@@ -114,7 +114,7 @@ def main():
             yolo_api_stats = get_yolo_api_stats(window=25)
             pod_stats = get_pod_stats(pod_id=pod_id, window=25)
 
-            stats_file.write("{} {} {} {} {} {} {} {} {}".format(
+            stats_file.write("{} {} {} {} {} {} {}\n".format(
                 rps, cpu,
                 yolo_api_stats["request_rate"],
                 yolo_api_stats["request_latency"],
