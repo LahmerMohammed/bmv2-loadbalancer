@@ -65,7 +65,7 @@ async def get_stats(window: int = WINDOW):
     
     
     request_rate = 0
-    for req_c in reversed(app.REQUEST_COUNTER): 
+    for req_c in reversed(REQUEST_COUNTER): 
         if req_c < starting_from:
             break
         request_rate = request_rate + 1
