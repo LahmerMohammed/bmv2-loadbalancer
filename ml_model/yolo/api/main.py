@@ -6,20 +6,23 @@ import cvlib as cv
 from fastapi import FastAPI, UploadFile, HTTPException
 from enum import Enum
 import datetime
-
-
+from multiprocessing import Manager
+manager = Manager()
 
 # List available models using Enum for convenience. This is useful when the options are pre-defined.
 class Model(str, Enum):
     yolov3tiny = "yolov3-tiny"
     yolov3 = "yolov3"
 
+from multiprocessing import Manager
+
 
 app = FastAPI(title='Deploying a ML Model with FastAPI')
+manager = Manager()
 
-app.REQUEST_COUNTER = []
-app.REQUEST_LATENCY = []
-app.WINDOW = 10 # seconds
+REQUEST_COUNTER = manager.list([])
+REQUEST_LATENCY = manager.list([])
+WINDOW = 10
 
 
 @app.get("/")
@@ -36,7 +39,7 @@ async def update_metrics(request, call_next):
     
 
     timestamp = datetime.datetime.now()
-    app.REQUEST_COUNTER.append(timestamp)
+    REQUEST_COUNTER.append(timestamp)
 
     
     start_time = datetime.datetime.now()
@@ -45,14 +48,14 @@ async def update_metrics(request, call_next):
     total_time = (end_time - start_time).total_seconds()
 
     timestamp = datetime.datetime.now()
-    app.REQUEST_LATENCY.append({
+    REQUEST_LATENCY.append({
         'timestamp': datetime.datetime.now(),
         'value': total_time
     })
     return response
 
 @app.get('/stats')
-async def get_stats(window: int = app.WINDOW):
+async def get_stats(window: int = WINDOW):
     global app
 
     if window is not None and window <= 0:
@@ -69,7 +72,7 @@ async def get_stats(window: int = app.WINDOW):
     
 
     request_latency = []
-    for req_l in reversed(app.REQUEST_LATENCY): 
+    for req_l in reversed(REQUEST_LATENCY): 
         if req_l['timestamp'] < starting_from:
             break
         request_latency.append(req_l['value'])

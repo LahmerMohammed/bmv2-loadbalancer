@@ -54,7 +54,7 @@ def get_yolo_api_status():
     
 
 def get_pod_stats(pod_id: str, window: int):
-    url = f"http://10.198.0.11:9000/stats/{pod_id}?window={window}"
+    url = f"http://10.198.0.11:10001/stats/{pod_id}?window={window}"
 
     try:
         # Send a GET request to the server
@@ -69,7 +69,7 @@ kubernetes = KubernetesCLI()
 
 
 cpu_values = ["1000m", "2000m", "3000m", "4000m"]
-rps_values = [1, 8, 16, 32, 64, 128]
+rps_values = [1, 2, 3, 4, 5, 6] * 100
 
 
 def main():
@@ -78,7 +78,7 @@ def main():
 
     for rps in rps_values:
         for cpu in cpu_values:
-            stats_file = open('stats.txt', 'a')
+            stats_file = open('model_data.txt', 'a')
             # Delete pod if exist
             kubernetes.delete_pod(POD_NAME)
             print("Deleting pod {} ....".format(POD_NAME))
@@ -115,14 +115,13 @@ def main():
             pod_stats = get_pod_stats(pod_id=pod_id, window=25)
 
             stats_file.write("{} {} {} {} {} {} {} {} {}".format(
-                rps, cpu, 
-                yolo_api_stats["request_rate"], 
-                yolo_api_stats["request_latency"], 
+                rps, cpu,
+                yolo_api_stats["request_rate"],
+                yolo_api_stats["request_latency"],
                 pod_stats["cpu_usage"],
-                " ".join(map(str, pod_stats["per_cpu_usage"]))
-                ),
+                " ".join(map(str, pod_stats["per_cpu_usage"])),
                 pod_stats["memory_usage"]
-            )
+            ))
 
             stats_file.close()
 
