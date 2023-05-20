@@ -73,8 +73,8 @@ async def get_stats(window: int = WINDOW):
             break
         
         request_rate = request_rate + 1
-    print(request_rate)
-
+    print(f"req_rate: {request_rate}")
+    print(f"req_rate: {interval}")
     request_latency = []
     for req_l in reversed(REQUEST_LATENCY): 
         if req_l['timestamp'] < starting_from:
