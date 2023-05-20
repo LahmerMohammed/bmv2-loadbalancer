@@ -17,9 +17,9 @@ class Model(str, Enum):
 
 app = FastAPI(title='Deploying a ML Model with FastAPI')
 
-REQUEST_COUNTER = []
-REQUEST_LATENCY = []
-WINDOW = 10 # seconds
+app.REQUEST_COUNTER = []
+app.REQUEST_LATENCY = []
+app.WINDOW = 10 # seconds
 
 
 @app.get("/")
@@ -29,16 +29,14 @@ def home():
 
 @app.middleware("http")
 async def update_metrics(request, call_next):
-    global REQUEST_COUNTER
-    global REQUEST_LATENCY
-    global WINDOW
-    if str(request.url.path) != '/health':
+    global app
+    if str(request.url.path) != '/predict':
         response = await call_next(request)
         return response
     
 
     timestamp = datetime.datetime.now()
-    REQUEST_COUNTER.append(timestamp)
+    app.REQUEST_COUNTER.append(timestamp)
 
     
     start_time = datetime.datetime.now()
@@ -47,17 +45,15 @@ async def update_metrics(request, call_next):
     total_time = (end_time - start_time).total_seconds()
 
     timestamp = datetime.datetime.now()
-    REQUEST_LATENCY.append({
+    app.REQUEST_LATENCY.append({
         'timestamp': datetime.datetime.now(),
         'value': total_time
     })
     return response
 
 @app.get('/stats')
-async def get_stats(window: int = WINDOW):
-    global REQUEST_COUNTER
-    global REQUEST_LATENCY
-    global WINDOW
+async def get_stats(window: int = app.WINDOW):
+    global app
 
     if window is not None and window <= 0:
         return {"window": "Window must be a positive integer greather than zero !"}
@@ -66,14 +62,14 @@ async def get_stats(window: int = WINDOW):
     
     
     request_rate = 0
-    for req_c in reversed(REQUEST_COUNTER): 
+    for req_c in reversed(app.REQUEST_COUNTER): 
         if req_c < starting_from:
             break
         request_rate = request_rate + 1
     
 
     request_latency = []
-    for req_l in reversed(REQUEST_LATENCY): 
+    for req_l in reversed(app.REQUEST_LATENCY): 
         if req_l['timestamp'] < starting_from:
             break
         request_latency.append(req_l['value'])
