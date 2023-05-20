@@ -1,3 +1,3 @@
 #!/bin/bash
 
-uvicorn main:app --reload --port 8000 --host 0.0.0.0 --workers 4
+uvicorn main:app --port 8000 --host 0.0.0.0 --workers 4
