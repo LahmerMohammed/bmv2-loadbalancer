@@ -18,6 +18,7 @@ spec:
     resources:
       limits:
         cpu: "1500m"
+        memory: "3Gi"
               
     
     
