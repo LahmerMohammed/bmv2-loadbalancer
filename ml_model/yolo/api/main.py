@@ -34,7 +34,7 @@ def home():
 @app.middleware("http")
 async def update_metrics(request, call_next):
     global app
-    if str(request.url.path) != '/predict':
+    if str(request.url.path) != '/health':
         response = await call_next(request)
         return response
     
