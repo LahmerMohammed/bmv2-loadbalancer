@@ -5,8 +5,9 @@ import cv2
 import cvlib as cv
 from fastapi import FastAPI, UploadFile, HTTPException
 from enum import Enum
-import datetime
 from multiprocessing import Manager
+import time
+
 manager = Manager()
 
 # List available models using Enum for convenience. This is useful when the options are pre-defined.
@@ -38,18 +39,18 @@ async def update_metrics(request, call_next):
         return response
     
 
-    timestamp = datetime.datetime.now()
+    timestamp = time.time()
     REQUEST_COUNTER.append(timestamp)
 
     
-    start_time = datetime.datetime.now()
+    start_time = time.time()
     response = await call_next(request)
-    end_time = datetime.datetime.now()
+    end_time = time.time()
     total_time = (end_time - start_time).total_seconds()
 
-    timestamp = datetime.datetime.now()
+    timestamp = time.time()
     REQUEST_LATENCY.append({
-        'timestamp': datetime.datetime.now(),
+        'timestamp': time.time(),
         'value': total_time
     })
     return response
@@ -61,7 +62,7 @@ async def get_stats(window: int = WINDOW):
     if window is not None and window <= 0:
         return {"window": "Window must be a positive integer greather than zero !"}
     
-    starting_from = datetime.datetime.now() - datetime.timedelta(seconds=window) 
+    starting_from = time.time() - window
     
     
     request_rate = 0
