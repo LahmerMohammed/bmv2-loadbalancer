@@ -50,4 +50,3 @@ sudo apt install socat conntrack ebtables ipset -y
 
 curl -sfL https://get-kk.kubesphere.io | VERSION=v3.0.7 sh -
 chmod +x kk
-

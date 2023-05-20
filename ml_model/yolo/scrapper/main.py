@@ -14,13 +14,13 @@ STOP_THREAD = False
 
 pod_id_regex = r'.*pod(.{0,})'
 
-cpu_cgroup_dir = '/sys/fs/cgroup/cpuacct/kubepods'
+cpu_cgroup_dir = '/sys/fs/cgroup/cpuacct/kubepods.slice'
 memory_cgroup_dir = '/sys/fs/cgroup/memory/kubepods'
 
-#/sys/fs/cgroup/memory/kubepods/burstable/pod91322901-a432-4b75-a793-d9742983d275/memory.usage_in_bytes 
+#/sys/fs/cgroup/cpuacct/kubepods.slice/kubepods-burstable.slice/kubepods-burstable-pod90ec4173_930c_41c4_b302_cdf45f449f2a.slice/
 
 pod_slice_dirs = [dir for dir in os.listdir(
-    cpu_cgroup_dir) if dir.startswith('burstable') ]
+    cpu_cgroup_dir) if dir.startswith('kubepods-burstable') ]
 
 def get_pod_per_cpu_stat(pod_path: str, cpu_quota_s, cpu_period_s, interval_resolution_s=1):
     per_cpu_usage_path = 'cpuacct.usage_percpu'
@@ -71,10 +71,10 @@ def scrape_pod_cpu_memory_usage():
     for dir in pod_slice_dirs:
         pds = os.listdir(os.path.join(cpu_cgroup_dir, dir))
         pod_dirs.extend([os.path.join(dir, pod_dir)
-                        for pod_dir in pds if re.match(r'pod.*', pod_dir)])
+                        for pod_dir in pds if re.match(r'.*pod.*', pod_dir)])
     
     for pod_dir in pod_dirs:
-        pod_id = pod_dir.split('/')[1].split('.')[0].split('pod')[1]
+        pod_id = pod_dir.split('/')[1].split('.')[0].split('-')[2].split('pod')[1]
         pod_path = os.path.join(cpu_cgroup_dir, pod_dir)
         
         try:
