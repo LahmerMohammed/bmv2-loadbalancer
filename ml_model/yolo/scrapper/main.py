@@ -145,22 +145,6 @@ def get_stats(pod_id: str, window: int):
     
     return {
         'per_cpu_usage': avg_per_cpu_usage_values,
-        'cpu_usage': sum(avg_per_cpu_usage_values),
-        'memory_usage': sum(mem_data) / len(mem_data)
+        'cpu_usage': sum(avg_per_cpu_usage_values) if len(avg_per_cpu_usage_values) else -1,
+        'memory_usage': sum(mem_data) / len(mem_data) if len(mem_data) != 0 else -1
     }
-
-def on_shutdown():
-    print("Shutting down the application...")
-    STOP_THREAD = True
-
-import atexit
-
-# Register the on_shutdown function with atexit
-atexit.register(on_shutdown)
-
-
-"""
-rps cpu_limit req_rate req_latency cpu min_cpu max_cpu cpu0 cpu1 cpu2 cpu3 cpu4 cpu5
-1   1000m     0.94     6.02        17  0.0     67.0    14.4 3.66 0.0  53.6 28.2 0.0
-1   1000m     0.94     6.09        16  16.5    16.8    0.0  36.0 0.0  0.0  63.8 0.0
-""" 
