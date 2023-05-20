@@ -65,9 +65,12 @@ async def get_stats(window: int = WINDOW):
     
     
     request_rate = 0
+    interval = REQUEST_COUNTER[-1]
     for req_c in reversed(REQUEST_COUNTER): 
         if req_c < starting_from:
+            interval = interval - req_c
             break
+    
         request_rate = request_rate + 1
     
 
@@ -77,9 +80,9 @@ async def get_stats(window: int = WINDOW):
             break
         request_latency.append(req_l['value'])
     
-    
+    interval 
     return {
-        "request_rate": round(request_rate / window, 2),
+        "request_rate": -1 if interval <= 0 else round(request_rate / interval, 2),
         "request_latency": -1 if len(request_latency) == 0 else  round(sum(request_latency) / len(request_latency), 2)
     }
 
