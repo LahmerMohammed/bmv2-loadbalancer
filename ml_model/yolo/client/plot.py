@@ -20,20 +20,20 @@ def plot_num_vCpu_vs_cpu_usage():
     # Extract CPU cores and CPU usage for both cases
     cpu_cores = list(set(data[:, 1]))
     cpu_usage = data[:, 4]
-    cpu_usage_no_model = data[:, 11]
+    cpu_usage_no_model = data[:, 22]
 
     # Split the data into two groups: first 4 points and last 4 points
-    cpu_usage_first_4 = cpu_usage[:4]
-    cpu_usage_no_model_first_4 = cpu_usage_no_model[:4]
+    cpu_usage_first_4 = cpu_usage[:5]
+    cpu_usage_no_model_first_4 = cpu_usage_no_model[:5]
 
-    cpu_usage_second_4 = cpu_usage[4:8]
-    cpu_usage_no_model_second_4 = cpu_usage_no_model[4:8]
+    cpu_usage_second_4 = cpu_usage[5:10]
+    cpu_usage_no_model_second_4 = cpu_usage_no_model[5:10]
 
-    cpu_usage_third_4 = cpu_usage[8:12]
-    cpu_usage_no_model_third_4 = cpu_usage_no_model[8:12]
+    cpu_usage_third_4 = cpu_usage[10:15]
+    cpu_usage_no_model_third_4 = cpu_usage_no_model[10:15]
 
-    cpu_usage_last_4 = cpu_usage[-4:]
-    cpu_usage_no_model_last_4 = cpu_usage_no_model[-4:]
+    cpu_usage_last_4 = cpu_usage[15:20]
+    cpu_usage_no_model_last_4 = cpu_usage_no_model[15:20]
 
     # Calculate the normalized CPU usage
     cpu_usage_normalized_first_4 = np.array(
@@ -57,17 +57,17 @@ def plot_num_vCpu_vs_cpu_usage():
     plt.bar(index + 0.1, cpu_usage_no_model_second_4,
             bar_width, color='green', alpha=0.3)
     plt.bar(index + 0.1, cpu_usage_normalized_second_4, bar_width, color='green',
-            label='RPS=2', alpha=0.7, bottom=cpu_usage_no_model_second_4)
+            label='RPS=5', alpha=0.7, bottom=cpu_usage_no_model_second_4)
 
     plt.bar(index, cpu_usage_no_model_third_4,
             bar_width, color='red', alpha=0.3)
     plt.bar(index, cpu_usage_normalized_third_4, bar_width, color='red',
-            label='RPS=4', alpha=0.7, bottom=cpu_usage_no_model_third_4)
+            label='RPS=10', alpha=0.7, bottom=cpu_usage_no_model_third_4)
 
     plt.bar(index - 0.1, cpu_usage_no_model_last_4,
             bar_width, color='black', alpha=0.3)
     plt.bar(index - 0.1, cpu_usage_normalized_last_4, bar_width, color='black',
-            label='RPS=8', alpha=0.7, bottom=cpu_usage_no_model_last_4)
+            label='RPS=15', alpha=0.7, bottom=cpu_usage_no_model_last_4)
 
     # Set x-axis tick labels
     plt.xticks(index + bar_width/2, cpu_cores)
@@ -93,7 +93,7 @@ def plot_num_vCpu_vs_req_latency():
             data[column].append(float(value))
 
     # Define color mapping for RPS values
-    color_mapping = {1: 'green', 2: 'red', 4: 'blue', 8: 'black'}
+    color_mapping = {1: 'green', 5: 'red', 10: 'blue', 15: 'black'}
 
     for _rps in set(data["rps"]):
         filtered_data = {
@@ -108,8 +108,6 @@ def plot_num_vCpu_vs_req_latency():
     plt.ylabel('Request Latency (s) ')
     plt.title('Request Latency vs #vCpu')
 
-    plt.xlim(1, 4)
-
     # Create legend based on color mapping
     legend_labels = [f'RPS = {rps}' for rps in color_mapping.keys()]
     legend_colors = list(color_mapping.values())
@@ -121,4 +119,4 @@ def plot_num_vCpu_vs_req_latency():
     plt.show()
 
 
-plot_num_vCpu_vs_req_latency()
+plot_num_vCpu_vs_cpu_usage()
