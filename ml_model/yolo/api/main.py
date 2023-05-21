@@ -5,10 +5,9 @@ import cv2
 import cvlib as cv
 from fastapi import FastAPI, UploadFile, HTTPException
 from enum import Enum
-from multiprocessing import Manager
 import time
+from threading import Lock
 
-manager = Manager()
 
 # List available models using Enum for convenience. This is useful when the options are pre-defined.
 class Model(str, Enum):
@@ -21,10 +20,14 @@ from multiprocessing import Manager
 app = FastAPI(title='Deploying a ML Model with FastAPI')
 manager = Manager()
 
-REQUEST_COUNTER = manager.list([])
-REQUEST_LATENCY = manager.list([])
+data = {
+    'REQUEST_COUNTER': [],
+    'REQUEST_LATENCY': []
+}
+
+# Mutex lock
+mutex = Lock()
 WINDOW = 10
-counter = 0
 
 
 @app.get("/")
@@ -34,16 +37,14 @@ def home():
 
 @app.middleware("http")
 async def update_metrics(request, call_next):
-    global counter
-    global REQUEST_COUNTER
-    global REQUEST_LATENCY
+    global data
     if str(request.url.path) != '/predict':
         response = await call_next(request)
         return response
     
-
+    mutex.acquire()
     timestamp = time.time()
-    REQUEST_COUNTER.append(timestamp)
+    data["REQUEST_COUNTER"].append(timestamp)
 
     
     start_time = time.time()
@@ -52,28 +53,26 @@ async def update_metrics(request, call_next):
     total_time = end_time - start_time
     counter = counter + 1
     timestamp = time.time()
-    REQUEST_LATENCY.append({
+    data["REQUEST_LATENCY"].append({
         'timestamp': time.time(),
         'value': total_time
     })
-
-    print(f"request number {counter} {len(REQUEST_COUNTER)} {len(REQUEST_COUNTER)}: {total_time}s")
 
     return response
 
 @app.get('/stats')
 async def get_stats(window: int = WINDOW):
-    global REQUEST_COUNTER
-    global REQUEST_LATENCY
+    global data
 
     if window is not None and window <= 0:
         return {"window": "Window must be a positive integer greather than zero !"}
     
+    mutex.acquire()
     starting_from = time.time() - window
     
     
     request_rate = 0
-    for req_c in reversed(REQUEST_COUNTER): 
+    for req_c in reversed(data["REQUEST_COUNTER"]): 
         if req_c < starting_from:
             break
         
@@ -81,13 +80,13 @@ async def get_stats(window: int = WINDOW):
     
     print(f"request_rate: {request_rate}")
     request_latency = []
-    for req_l in reversed(REQUEST_LATENCY): 
+    for req_l in reversed(data['REQUEST_LATENCY']): 
         if req_l['timestamp'] < starting_from:
             break
         request_latency.append(req_l['value'])
 
-    print(f"request_latency_size: {len(request_latency)}")
-    print(f"request_latency_sum: {sum(request_latency)}")
+
+    mutex.release()
     
     return {
         "request_rate": request_rate,
