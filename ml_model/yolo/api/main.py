@@ -51,13 +51,15 @@ async def update_metrics(request, call_next):
     response = await call_next(request)
     end_time = time.time()
     total_time = end_time - start_time
-    counter = counter + 1
+
+
     timestamp = time.time()
     data["REQUEST_LATENCY"].append({
         'timestamp': time.time(),
         'value': total_time
     })
-
+    mutex.release()
+    
     return response
 
 @app.get('/stats')
