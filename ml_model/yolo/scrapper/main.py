@@ -23,6 +23,10 @@ pod_slice_dirs = [dir for dir in os.listdir(
     cpu_cgroup_dir) if dir.startswith('kubepods-burstable') ]
 
 async def get_pod_per_cpu_stat(pod_path: str, cpu_quota_s, cpu_period_s, interval_resolution_s=1):
+    global pod_id_regex
+    global cpu_cgroup_dir
+    global pod_slice_dirs
+
     per_cpu_usage_path = 'cpuacct.usage_percpu'
     memory_usage_path = "memory.usage_in_bytes"
     memory_limit_path = "memory.limit_in_bytes" 
@@ -32,8 +36,7 @@ async def get_pod_per_cpu_stat(pod_path: str, cpu_quota_s, cpu_period_s, interva
         initial_per_cpu_usage_s = [
             float(x)/1000_000_000 for x in f.read().strip().split(' ')]
         
-
-    time.sleep(interval_resolution_s)
+    asyncio.sleep(interval_resolution_s)
 
     with open(os.path.join(pod_path, per_cpu_usage_path), 'r') as f:
         end_s = time.time()
@@ -93,7 +96,7 @@ async def scrape_pod_cpu_memory_usage():
                     STATS[pod_id] = []
 
 
-                per_cpu_usage_percentage, memory_usage_percentage = get_pod_per_cpu_stat(
+                per_cpu_usage_percentage, memory_usage_percentage = await get_pod_per_cpu_stat(
                     cpu_period_s=cpu_period_s, cpu_quota_s=cpu_quota_s, 
                     pod_path=pod_path, interval_resolution_s=0.5)
                 timestamp = time.time()
