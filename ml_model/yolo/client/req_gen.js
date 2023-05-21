@@ -4,7 +4,8 @@ const FormData = require("form-data");
 const loadtest = require("loadtest");
 
 const requestsPerSecond = process.argv[2];
-/*
+
+
 // Define the custom request generator function
 function requestGenerator(params, options, client, callback) {
   // Read the image file and convert it to a buffer
@@ -57,8 +58,8 @@ const options = {
   requestsPerSecond: requestsPerSecond,
   maxSeconds: 35,
 };
-*/
 
+/*
 
 // Define the custom request generator function
 function requestGenerator(params, options, client, callback) {
@@ -89,13 +90,13 @@ function requestGenerator(params, options, client, callback) {
 
 // Define the load testing options
 const options = {
-  url: 'http://10.198.0.13:31977/health',
+  url: 'http://128.110.218.25:31334/health',
   maxSeconds: 35,  // Total number of requests to be made
   concurrency: 1,  // Number of requests to be made concurrently
   requestGenerator: requestGenerator,
   requestsPerSecond: requestsPerSecond,
 };
-
+*/
 
 // Perform the load testing
 loadtest.loadTest(options, function (error, result) {

@@ -1,0 +1,1 @@
+{"totalRequests":59,"totalErrors":0,"totalTimeSeconds":35.004995789,"rps":2,"meanLatencyMs":19247.7,"maxLatencyMs":26516,"minLatencyMs":2348,"percentiles":{"50":22514,"90":25796,"95":26230,"99":26516},"errorCodes":{},"instanceIndex":0}

@@ -68,8 +68,8 @@ def get_pod_stats(pod_id: str, window: int):
 kubernetes = KubernetesCLI()
 
 
-cpu_values = ["15000m"]
-rps_values = [10]
+cpu_values = ["3000m", "4000m", "6000m", "7000m", "9000m","10000m", "12000m", "14000m", "15000m"]
+rps_values = [1, 2, 3, 4, 5, 6, 7, 8] * 10
 
 
 def main():
@@ -101,6 +101,7 @@ def main():
                 yolo_api_status = get_yolo_api_status()
 
             print("Starting test load ....")
+            start_time = time.time()
             try:
 
                 subprocess.run(['node', 'req_gen.js', str(rps)],
@@ -110,13 +111,13 @@ def main():
                 print(e.stderr)
 
             print("Load test finished .")
-
-            yolo_api_stats = get_yolo_api_stats(window=25)
-            pod_stats = get_pod_stats(pod_id=pod_id, window=25)
-
+            duration = int(time.time() - start_time)
+            yolo_api_stats = get_yolo_api_stats(window=duration)
+            pod_stats = get_pod_stats(pod_id=pod_id, window=duration)
+            print(pod_stats)
             stats_file.write("{} {} {} {} {} {} {}\n".format(
                 rps, cpu,
-                yolo_api_stats["request_rate"],
+                (yolo_api_stats["request_rate"] / duration ),
                 yolo_api_stats["request_latency"],
                 pod_stats["cpu_usage"],
                 " ".join(map(str, pod_stats["per_cpu_usage"])),
