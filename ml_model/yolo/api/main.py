@@ -34,8 +34,9 @@ def home():
 
 @app.middleware("http")
 async def update_metrics(request, call_next):
-    global app
     global counter
+    global REQUEST_COUNTER
+    global REQUEST_LATENCY
     if str(request.url.path) != '/predict':
         response = await call_next(request)
         return response
@@ -62,7 +63,8 @@ async def update_metrics(request, call_next):
 
 @app.get('/stats')
 async def get_stats(window: int = WINDOW):
-    global app
+    global REQUEST_COUNTER
+    global REQUEST_LATENCY
 
     if window is not None and window <= 0:
         return {"window": "Window must be a positive integer greather than zero !"}
