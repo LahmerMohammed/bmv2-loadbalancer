@@ -49,13 +49,15 @@ async def update_metrics(request, call_next):
     response = await call_next(request)
     end_time = time.time()
     total_time = end_time - start_time
-    print(f"request number {counter} {len(REQUEST_COUNTER)} {len(REQUEST_COUNTER)}: {total_time}s")
     counter = counter + 1
     timestamp = time.time()
     REQUEST_LATENCY.append({
         'timestamp': time.time(),
         'value': total_time
     })
+
+    print(f"request number {counter} {len(REQUEST_COUNTER)} {len(REQUEST_COUNTER)}: {total_time}s")
+
     return response
 
 @app.get('/stats')
