@@ -74,7 +74,7 @@ async def scrape_pod_cpu_memory_usage():
                         for pod_dir in pds if re.match(r'.*pod.*', pod_dir)])
     
     for pod_dir in pod_dirs:
-        pod_id = pod_dir.split('/')[1].split('.')[0].split('-')[2].split('pod')[1]
+        pod_id = pod_dir.split('/')[1].split('.')[0].split('-')[2].split('pod')[1].replace('_', '-')
         pod_path = os.path.join(cpu_cgroup_dir, pod_dir)
         
         async with lock:
@@ -89,6 +89,7 @@ async def scrape_pod_cpu_memory_usage():
                     cpu_period_s = float(f.read().strip()) / 1000_000
 
                 if pod_id not in STATS:
+                    print(pod_id)
                     STATS[pod_id] = []
 
 
@@ -115,10 +116,6 @@ async def every(delay, task):
         print("Ctrl+C detected. Stopping the task...")
         sys.exit(0)
 
-async def scrape_pod_cpu_memory_usage():
-    # Your actual task implementation here
-    print("Scraping pod CPU and memory usage...")
-
 @app.on_event("startup")
 async def startup_event():
     loop = asyncio.get_running_loop()
@@ -131,8 +128,6 @@ async def startup_event():
     loop.add_signal_handler(signal.SIGINT, stop_task)
     loop.add_signal_handler(signal.SIGTERM, stop_task)
 
-    # Wait for the task to complete
-    await task
 
 # Endpoint to retrieve CPU and memory stats
 @app.get('/stats/{pod_id}')
