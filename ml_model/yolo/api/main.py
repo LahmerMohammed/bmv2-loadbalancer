@@ -7,6 +7,7 @@ from fastapi import FastAPI, UploadFile, HTTPException
 from enum import Enum
 import time
 from threading import Lock
+import asyncio
 
 
 # List available models using Enum for convenience. This is useful when the options are pre-defined.
@@ -25,8 +26,8 @@ data = {
     'REQUEST_LATENCY': []
 }
 
-# Mutex lock
-mutex = Lock()
+lock = asyncio.Lock()
+
 WINDOW = 10
 
 
@@ -41,26 +42,26 @@ async def update_metrics(request, call_next):
     if str(request.url.path) != '/predict':
         response = await call_next(request)
         return response
-    
-    mutex.acquire()
-    timestamp = time.time()
-    data["REQUEST_COUNTER"].append(timestamp)
-
-    
-    start_time = time.time()
-    response = await call_next(request)
-    end_time = time.time()
-    total_time = end_time - start_time
 
 
-    timestamp = time.time()
-    data["REQUEST_LATENCY"].append({
-        'timestamp': time.time(),
-        'value': total_time
-    })
-    mutex.release()
-    
-    return response
+    async with lock:
+
+        timestamp = time.time()
+        data["REQUEST_COUNTER"].append(timestamp)
+
+        start_time = time.time()
+        response = await call_next(request)
+        end_time = time.time()
+        total_time = end_time - start_time
+
+
+        timestamp = time.time()
+        data["REQUEST_LATENCY"].append({
+            'timestamp': time.time(),
+            'value': total_time
+        })
+
+        return response
 
 @app.get('/stats')
 async def get_stats(window: int = WINDOW):
@@ -69,31 +70,30 @@ async def get_stats(window: int = WINDOW):
     if window is not None and window <= 0:
         return {"window": "Window must be a positive integer greather than zero !"}
     
-    mutex.acquire()
-    starting_from = time.time() - window
-    
-    
-    request_rate = 0
-    for req_c in reversed(data["REQUEST_COUNTER"]): 
-        if req_c < starting_from:
-            break
-        
-        request_rate = request_rate + 1
-    
-    print(f"request_rate: {request_rate}")
-    request_latency = []
-    for req_l in reversed(data['REQUEST_LATENCY']): 
-        if req_l['timestamp'] < starting_from:
-            break
-        request_latency.append(req_l['value'])
+    async with lock:
+        starting_from = time.time() - window
 
 
-    mutex.release()
-    
-    return {
-        "request_rate": request_rate,
-        "request_latency": -1 if len(request_latency) == 0 else  round(sum(request_latency) / len(request_latency), 2)
-    }
+        request_rate = 0
+        for req_c in reversed(data["REQUEST_COUNTER"]): 
+            if req_c < starting_from:
+                break
+            
+            request_rate = request_rate + 1
+
+        print(f"request_rate: {request_rate}")
+        request_latency = []
+        for req_l in reversed(data['REQUEST_LATENCY']): 
+            if req_l['timestamp'] < starting_from:
+                break
+            request_latency.append(req_l['value'])
+
+
+
+        return {
+            "request_rate": request_rate,
+            "request_latency": -1 if len(request_latency) == 0 else  round(sum(request_latency) / len(request_latency), 2)
+        }
 
 @app.get("/health")
 def health():
