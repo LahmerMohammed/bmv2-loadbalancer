@@ -35,6 +35,7 @@ def home():
 @app.middleware("http")
 async def update_metrics(request, call_next):
     global app
+    global counter
     if str(request.url.path) != '/predict':
         response = await call_next(request)
         return response
@@ -48,7 +49,7 @@ async def update_metrics(request, call_next):
     response = await call_next(request)
     end_time = time.time()
     total_time = end_time - start_time
-    print(f"request number {counter}: {total_time}s")
+    print(f"request number {counter} {len(REQUEST_COUNTER)} {len(REQUEST_COUNTER)}: {total_time}s")
     counter = counter + 1
     timestamp = time.time()
     REQUEST_LATENCY.append({
