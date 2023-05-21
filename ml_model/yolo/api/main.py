@@ -24,6 +24,7 @@ manager = Manager()
 REQUEST_COUNTER = manager.list([])
 REQUEST_LATENCY = manager.list([])
 WINDOW = 10
+counter = 0
 
 
 @app.get("/")
@@ -47,6 +48,7 @@ async def update_metrics(request, call_next):
     response = await call_next(request)
     end_time = time.time()
     total_time = end_time - start_time
+    print(f"request number {counter}: {total_time}s")
 
     timestamp = time.time()
     REQUEST_LATENCY.append({
@@ -71,12 +73,17 @@ async def get_stats(window: int = WINDOW):
             break
         
         request_rate = request_rate + 1
-    print(f"req_rate: {request_rate}")
+    
+    print(f"request_rate: {request_rate}")
     request_latency = []
     for req_l in reversed(REQUEST_LATENCY): 
         if req_l['timestamp'] < starting_from:
             break
         request_latency.append(req_l['value'])
+
+    print(f"request_latency_size: {len(request_latency)}")
+    print(f"request_latency_sum: {sum(request_latency)}")
+    
     return {
         "request_rate": request_rate,
         "request_latency": -1 if len(request_latency) == 0 else  round(sum(request_latency) / len(request_latency), 2)
