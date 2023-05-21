@@ -2,15 +2,15 @@ import os
 import time
 import re
 from fastapi import FastAPI, HTTPException
-import threading
 import signal
+import asyncio
 import sys
 
 app = FastAPI()
 
 STATS = {}
-STOP_THREAD = False
 
+lock = asyncio.Lock()
 
 pod_id_regex = r'.*pod(.{0,})'
 
@@ -22,7 +22,7 @@ memory_cgroup_dir = '/sys/fs/cgroup/memory/kubepods'
 pod_slice_dirs = [dir for dir in os.listdir(
     cpu_cgroup_dir) if dir.startswith('kubepods-burstable') ]
 
-def get_pod_per_cpu_stat(pod_path: str, cpu_quota_s, cpu_period_s, interval_resolution_s=1):
+async def get_pod_per_cpu_stat(pod_path: str, cpu_quota_s, cpu_period_s, interval_resolution_s=1):
     per_cpu_usage_path = 'cpuacct.usage_percpu'
     memory_usage_path = "memory.usage_in_bytes"
     memory_limit_path = "memory.limit_in_bytes" 
@@ -60,7 +60,7 @@ def get_pod_per_cpu_stat(pod_path: str, cpu_quota_s, cpu_period_s, interval_reso
     return (per_cpu_usage_percentage, memory_usage_percentage)
 
 
-def scrape_pod_cpu_memory_usage():
+async def scrape_pod_cpu_memory_usage():
     global pod_id_regex
     global cpu_cgroup_dir
     global STATS
@@ -77,45 +77,62 @@ def scrape_pod_cpu_memory_usage():
         pod_id = pod_dir.split('/')[1].split('.')[0].split('-')[2].split('pod')[1]
         pod_path = os.path.join(cpu_cgroup_dir, pod_dir)
         
-        try:
-            with open(os.path.join(pod_path, 'cpu.cfs_quota_us'), 'r') as f:
-                cpu_quota_s = float(f.read().strip()) / 1000_000
+        async with lock:
+            try:
+                with open(os.path.join(pod_path, 'cpu.cfs_quota_us'), 'r') as f:
+                    cpu_quota_s = float(f.read().strip()) / 1000_000
 
-            if cpu_quota_s <= 0:
+                if cpu_quota_s <= 0:
+                    continue
+
+                with open(os.path.join(pod_path, 'cpu.cfs_period_us'), 'r') as f:
+                    cpu_period_s = float(f.read().strip()) / 1000_000
+
+                if pod_id not in STATS:
+                    STATS[pod_id] = []
+
+
+                per_cpu_usage_percentage, memory_usage_percentage = get_pod_per_cpu_stat(
+                    cpu_period_s=cpu_period_s, cpu_quota_s=cpu_quota_s, 
+                    pod_path=pod_path, interval_resolution_s=0.5)
+                timestamp = time.time()
+                STATS[pod_id].append((timestamp, per_cpu_usage_percentage, memory_usage_percentage))
+            except FileNotFoundError:
+                if pod_id in STATS:
+                    STATS.pop(pod_id)
                 continue
 
-            with open(os.path.join(pod_path, 'cpu.cfs_period_us'), 'r') as f:
-                cpu_period_s = float(f.read().strip()) / 1000_000
-        
-            if pod_id not in STATS:
-                STATS[pod_id] = []
-        
-
-            per_cpu_usage_percentage, memory_usage_percentage = get_pod_per_cpu_stat(
-                cpu_period_s=cpu_period_s, cpu_quota_s=cpu_quota_s, 
-                pod_path=pod_path, interval_resolution_s=0.5)
-            timestamp = time.time()
-            STATS[pod_id].append((timestamp, per_cpu_usage_percentage, memory_usage_percentage))
-        except FileNotFoundError:
-            if pod_id in STATS:
-                STATS.pop(pod_id)
-            continue
 
 
+async def every(delay, task):
+    try:
+        while True:
+            await task()
+            await asyncio.sleep(delay)
+    except asyncio.CancelledError:
+        print("Task cancelled.")
+    except KeyboardInterrupt:
+        print("Ctrl+C detected. Stopping the task...")
+        sys.exit(0)
 
-def every(delay, task):
-  try:
-    while not STOP_THREAD:
-        task()
-        time.sleep(delay)
-  except KeyboardInterrupt:
-    print("Ctrl+C detected. Stopping the thread...")
-    sys.exit(0)   
+async def scrape_pod_cpu_memory_usage():
+    # Your actual task implementation here
+    print("Scraping pod CPU and memory usage...")
 
 @app.on_event("startup")
 async def startup_event():
-    threading.Thread(target=lambda: every(0.5, scrape_pod_cpu_memory_usage)).start()
+    loop = asyncio.get_running_loop()
+    task = loop.create_task(every(0.5, scrape_pod_cpu_memory_usage))
 
+    def stop_task():
+        task.cancel()
+
+    # Register stop_task() as a cleanup function when the event loop is closed
+    loop.add_signal_handler(signal.SIGINT, stop_task)
+    loop.add_signal_handler(signal.SIGTERM, stop_task)
+
+    # Wait for the task to complete
+    await task
 
 # Endpoint to retrieve CPU and memory stats
 @app.get('/stats/{pod_id}')
