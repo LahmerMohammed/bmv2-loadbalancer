@@ -19,7 +19,6 @@ from multiprocessing import Manager
 
 
 app = FastAPI(title='Deploying a ML Model with FastAPI')
-manager = Manager()
 
 data = {
     'REQUEST_COUNTER': [],
@@ -75,12 +74,13 @@ async def get_stats(window: int = WINDOW):
 
 
         request_rate = 0
+        interval = 0
         for req_c in reversed(data["REQUEST_COUNTER"]): 
             if req_c < starting_from:
                 break
-            
+            interval = req_c
             request_rate = request_rate + 1
-
+        interval = data["REQUEST_COUNTER"][-1] - interval
         print(f"request_rate: {request_rate}")
         request_latency = []
         for req_l in reversed(data['REQUEST_LATENCY']): 
@@ -91,7 +91,7 @@ async def get_stats(window: int = WINDOW):
 
 
         return {
-            "request_rate": request_rate,
+            "request_rate": request_rate / interval,
             "request_latency": -1 if len(request_latency) == 0 else  round(sum(request_latency) / len(request_latency), 2)
         }
 

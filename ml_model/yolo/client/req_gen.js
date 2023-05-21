@@ -52,11 +52,11 @@ function requestGenerator(params, options, client, callback) {
 
 // Define the load testing options
 const options = {
-  url: "http://128.110.218.25:31334/predict?model=yolov3",
+  url: "http://128.110.217.143:30356/predict?model=yolov3",
   concurrency: 1,
   requestGenerator: requestGenerator,
   requestsPerSecond: requestsPerSecond,
-  maxSeconds: 35,
+  maxSeconds: 30,
 };
 
 /*

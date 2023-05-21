@@ -10,11 +10,11 @@ import threading
 import time
 
 
-server_ip = "128.110.218.25"
+server_ip = "128.110.217.143"
 
 images = ['images/cars.jpg']
 
-yolo_service_endpoint = "http://{}:31334".format(server_ip)
+yolo_service_endpoint = "http://{}:30356".format(server_ip)
 
 POD_NAME = "yolo-v3"
 
@@ -37,7 +37,7 @@ def predict(image_name: str, model: Model = 'yolov3-tiny'):
     files = {'image': (image_name, open(image_name, 'rb'), 'image/jpeg')}
 
     return requests.post(
-        yolo_service_endpoint, params=params, headers=headers, files=files)
+        f"{yolo_service_endpoint}/predict", params=params, headers=headers, files=files)
 
 
 def get_yolo_api_status():
@@ -54,7 +54,7 @@ def get_yolo_api_status():
     
 
 def get_pod_stats(pod_id: str, window: int):
-    url = f"http://128.110.218.25:10001/stats/{pod_id}?window={window}"
+    url = f"http://128.110.217.143:10001/stats/{pod_id}?window={window}"
 
     try:
         # Send a GET request to the server
@@ -68,9 +68,11 @@ def get_pod_stats(pod_id: str, window: int):
 kubernetes = KubernetesCLI()
 
 
-cpu_values = ["3000m", "4000m", "6000m", "7000m", "9000m","10000m", "12000m", "14000m", "15000m"]
-rps_values = [1, 2, 3, 4, 5, 6, 7, 8] * 10
+#cpu_values = ["3000m", "4000m", "6000m", "7000m", "9000m","10000m", "12000m", "14000m", "15000m"]
+#rps_values = [1, 2, 3, 4, 5, 6, 7, 8] * 10
 
+values = ["3000m", "6000m", "9000m", "12000m", "15000m"]
+rps_values = [5, 10, 15]
 
 def main():
     global cpu_values
@@ -99,6 +101,12 @@ def main():
             while yolo_api_status == None:
                 sleep(2)
                 yolo_api_status = get_yolo_api_status()
+
+
+            #Warmup
+            for i in range(10):
+                result = predict("images/cars.jpg", "yolov3")
+                print(result)
 
             print("Starting test load ....")
             start_time = time.time()
