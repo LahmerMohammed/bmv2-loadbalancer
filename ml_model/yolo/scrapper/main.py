@@ -36,7 +36,7 @@ async def get_pod_per_cpu_stat(pod_path: str, cpu_quota_s, cpu_period_s, interva
         initial_per_cpu_usage_s = [
             float(x)/1000_000_000 for x in f.read().strip().split(' ')]
         
-    asyncio.sleep(interval_resolution_s)
+    await asyncio.sleep(interval_resolution_s)
 
     with open(os.path.join(pod_path, per_cpu_usage_path), 'r') as f:
         end_s = time.time()
