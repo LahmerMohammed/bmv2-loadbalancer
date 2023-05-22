@@ -3,8 +3,10 @@ const http = require("http");
 const FormData = require("form-data");
 const loadtest = require("loadtest");
 
-const requestsPerSecond = process.argv[2];
-const batchSize = process.argv[3];
+const requestsPerSecond = parseInt(process.argv[2]);
+const batchSize = parseInt(process.argv[3]);
+const duration = parseInt(process.argv[4]);
+
 const serice_ip = "128.110.218.27:31586"
 
 
@@ -59,7 +61,7 @@ const options = {
   concurrency: 1,
   requestGenerator: requestGenerator,
   requestsPerSecond: requestsPerSecond,
-  maxSeconds: 100,
+  maxSeconds: duration,
 };
 
 /*

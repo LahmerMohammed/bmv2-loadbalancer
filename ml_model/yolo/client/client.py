@@ -72,7 +72,7 @@ kubernetes = KubernetesCLI()
 #rps_values = [1, 2, 3, 4, 5, 6, 7, 8] * 10
 
 cpu_values = [f"{i}m" for i in range(3000, 15001, 500)]
-rps_values = list(range(1, 11), )
+rps_values = list(range(1, 11))
 batch_size = list(range(1, 11))
 
 def main():
@@ -98,10 +98,13 @@ def main():
             yolo_api_status = get_yolo_api_status()
         
         #Warmup
-        for i in range(10):
-            result = predict("images/cars.jpg", "yolov3")
-            print(result)
+        try:
+            
+            subprocess.run(['node', 'req_gen.js', '1', '1', '10'],
+                                check=True, capture_output=True, text=True)
 
+        except subprocess.CalledProcessError as e:
+            print(e.stderr)
         
         for rps in rps_values:
             for batch in batch_size:
@@ -113,7 +116,7 @@ def main():
                 start_time = time.perf_counter()
                 try:
 
-                    subprocess.run(['node', 'req_gen.js', str(rps), str(batch)],
+                    subprocess.run(['node', 'req_gen.js', str(rps), str(batch), '100'],
                                    check=True, capture_output=True, text=True)
 
                 except subprocess.CalledProcessError as e:
