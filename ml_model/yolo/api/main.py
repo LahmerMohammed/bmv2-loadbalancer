@@ -87,8 +87,9 @@ async def get_stats(window: int = WINDOW):
                 break
             request_latency.append(req_l['value'])
         total_requests = len(data["REQUEST_COUNTER"])
-        
-        data = {}
+
+        data["REQUEST_COUNTER"] = []
+        data["REQUEST_LATENCY"] = []
 
         return {
             "request_rate": -1 if interval == 0 else  round(request_rate / interval, 2),
