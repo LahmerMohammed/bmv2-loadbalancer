@@ -44,12 +44,7 @@ async def get_pod_per_cpu_stat(pod_path: str, cpu_quota_s, cpu_period_s, interva
             float(x)/1000_000_000 for x in f.read().strip().split(' ')]
     
     with open(os.path.join(pod_path.replace('cpuacct', 'memory'), memory_usage_path), 'r') as f:
-        memory_usage_b = float(f.read().strip())
-
-    with open(os.path.join(pod_path.replace('cpuacct', 'memory'), memory_limit_path), 'r') as f:
-        memory_limit_b = float(f.read().strip())
-
-    memory_usage_percentage = memory_usage_b / memory_limit_b * 100
+        memory_usage_mb = float(f.read().strip()) / 1000_000
 
     elapsed_time_s = end_s - start_s
     per_cpu_usage_percentage = []
@@ -60,7 +55,7 @@ async def get_pod_per_cpu_stat(pod_path: str, cpu_quota_s, cpu_period_s, interva
              ) * cpu_period_s / elapsed_time_s / cpu_quota_s * 100
         )
     
-    return (per_cpu_usage_percentage, memory_usage_percentage)
+    return (per_cpu_usage_percentage, memory_usage_mb)
 
 
 async def scrape_pod_cpu_memory_usage():
@@ -98,7 +93,7 @@ async def scrape_pod_cpu_memory_usage():
 
                 per_cpu_usage_percentage, memory_usage_percentage = await get_pod_per_cpu_stat(
                     cpu_period_s=cpu_period_s, cpu_quota_s=cpu_quota_s, 
-                    pod_path=pod_path, interval_resolution_s=0.5)
+                    pod_path=pod_path, interval_resolution_s=0.1)
                 timestamp = time.time()
                 STATS[pod_id].append((timestamp, per_cpu_usage_percentage, memory_usage_percentage))
             except FileNotFoundError:
@@ -122,7 +117,7 @@ async def every(delay, task):
 @app.on_event("startup")
 async def startup_event():
     loop = asyncio.get_running_loop()
-    task = loop.create_task(every(0.5, scrape_pod_cpu_memory_usage))
+    task = loop.create_task(every(0.1, scrape_pod_cpu_memory_usage))
 
     def stop_task():
         task.cancel()
@@ -134,9 +129,9 @@ async def startup_event():
 
 # Endpoint to retrieve CPU and memory stats
 @app.get('/stats/{pod_id}')
-def get_stats(pod_id: str, window: int):
-
-    data = STATS[pod_id]
+async def get_stats(pod_id: str, window: int):
+    async with lock:
+        data = STATS[pod_id]
 
     # Filter the data within the window
     current_time = time.time()

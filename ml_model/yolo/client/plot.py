@@ -20,20 +20,21 @@ def plot_num_vCpu_vs_cpu_usage():
     # Extract CPU cores and CPU usage for both cases
     cpu_cores = list(set(data[:, 1]))
     cpu_usage = data[:, 4]
+    print(data.shape)
     cpu_usage_no_model = data[:, 22]
-
+    num_cpu_sc = 6
     # Split the data into two groups: first 4 points and last 4 points
-    cpu_usage_first_4 = cpu_usage[:5]
-    cpu_usage_no_model_first_4 = cpu_usage_no_model[:5]
+    cpu_usage_first_4 = cpu_usage[:num_cpu_sc]
+    cpu_usage_no_model_first_4 = cpu_usage_no_model[:num_cpu_sc]
 
-    cpu_usage_second_4 = cpu_usage[5:10]
-    cpu_usage_no_model_second_4 = cpu_usage_no_model[5:10]
+    cpu_usage_second_4 = cpu_usage[num_cpu_sc:num_cpu_sc*2]
+    cpu_usage_no_model_second_4 = cpu_usage_no_model[num_cpu_sc:num_cpu_sc*2]
 
-    cpu_usage_third_4 = cpu_usage[10:15]
-    cpu_usage_no_model_third_4 = cpu_usage_no_model[10:15]
+    cpu_usage_third_4 = cpu_usage[num_cpu_sc*2:num_cpu_sc*3]
+    cpu_usage_no_model_third_4 = cpu_usage_no_model[num_cpu_sc*2:num_cpu_sc*3]
 
-    cpu_usage_last_4 = cpu_usage[15:20]
-    cpu_usage_no_model_last_4 = cpu_usage_no_model[15:20]
+    cpu_usage_last_4 = cpu_usage[num_cpu_sc*3:num_cpu_sc*4]
+    cpu_usage_no_model_last_4 = cpu_usage_no_model[num_cpu_sc*3:num_cpu_sc*4]
 
     # Calculate the normalized CPU usage
     cpu_usage_normalized_first_4 = np.array(
@@ -96,6 +97,8 @@ def plot_num_vCpu_vs_req_latency():
     color_mapping = {1: 'green', 5: 'red', 10: 'blue', 15: 'black'}
 
     for _rps in set(data["rps"]):
+        print(_rps)
+        print(color_mapping[_rps])
         filtered_data = {
             'cpu_limit': [cpu_limit for rps, cpu_limit in zip(data['rps'], data['cpu_limit']) if rps == _rps],
             'req_latency': [cpu for rps, cpu in zip(data['rps'], data['req_latency']) if rps == _rps]
@@ -119,4 +122,4 @@ def plot_num_vCpu_vs_req_latency():
     plt.show()
 
 
-plot_num_vCpu_vs_cpu_usage()
+plot_num_vCpu_vs_req_latency()

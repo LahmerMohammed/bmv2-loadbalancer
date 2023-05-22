@@ -1,8 +1,7 @@
 sudo apt update
 
-sudo apt install python3-venv python3-pip nodejs npm
+sudo apt install python3-venv python3-pip 
 
-pip3 install kubernetes
 # Allow SSH
 sudo iptables -A INPUT -p tcp --dport 22 -j ACCEPT
 
@@ -49,11 +48,5 @@ sudo apt install curl openssl tar -y
 
 sudo apt install socat conntrack ebtables ipset -y
 
-
-
-# Step 3: Create a Kubernetes Multi-node Cluster 
-
-curl -sfL https://get-kk.kubesphere.io | VERSION=v3.0.7 sh -
-chmod +x kk
-
-./kk create cluster -f cluster.yaml
+#docker run -d -p 5000:5000 --name local-registry registry
+#docker build -t lovalhost:5000/yolo-v3:v1 .

@@ -71,68 +71,75 @@ kubernetes = KubernetesCLI()
 #cpu_values = ["3000m", "4000m", "6000m", "7000m", "9000m","10000m", "12000m", "14000m", "15000m"]
 #rps_values = [1, 2, 3, 4, 5, 6, 7, 8] * 10
 
-values = ["3000m", "6000m", "9000m", "12000m", "15000m"]
-rps_values = [5, 10, 15]
+cpu_values = [f"{i}m" for i in range(3000, 15001, 500)]
+rps_values = list(range(1, 11), )
+batch_size = list(range(1, 11))
 
 def main():
     global cpu_values
     global rps_values
 
-    for rps in rps_values:
-        for cpu in cpu_values:
-            stats_file = open('stats.txt', 'a')
-            # Delete pod if exist
-            kubernetes.delete_pod(POD_NAME)
-            print("Deleting pod {} ....".format(POD_NAME))
-            while kubernetes.pod_exists(name=POD_NAME):
-                sleep(2)
+    for cpu in cpu_values:
+        kubernetes.delete_pod(POD_NAME)
+        print("Deleting pod {} ....".format(POD_NAME))
+        while kubernetes.pod_exists(name=POD_NAME):
+            sleep(2)
 
-            print("Pod {} was deleted successfully.".format(POD_NAME))
+        print("Pod {} was deleted successfully.".format(POD_NAME))
+        print('Adding pod with new cpu limits ...')
+        response = kubernetes.create_pod('../templates/pod.yaml', cpu=cpu)
 
-            print('Running scenario: cpu = {}'.format(cpu))
+        pod_id = response.metadata.uid
 
-            print('Adding pod with new cpu limits ...')
-            response = kubernetes.create_pod('../templates/pod.yaml', cpu=cpu)
-
-            pod_id = response.metadata.uid
-
+        yolo_api_status = get_yolo_api_status()
+        print(f"The pod --{pod_id}-- isn\'t ready yet!")
+        while yolo_api_status == None:
+            sleep(1)
             yolo_api_status = get_yolo_api_status()
-            print(f"The pod --{pod_id}-- isn\'t ready yet!")
-            while yolo_api_status == None:
-                sleep(2)
-                yolo_api_status = get_yolo_api_status()
+        
+        #Warmup
+        for i in range(10):
+            result = predict("images/cars.jpg", "yolov3")
+            print(result)
+
+        
+        for rps in rps_values:
+            for batch in batch_size:
+                print('Running scenario: cpu = {} -- rps = {} -- batch = {}'.format(cpu, rps, batch))
+                stats_file = open('stats.txt', 'a')
 
 
-            #Warmup
-            for i in range(10):
-                result = predict("images/cars.jpg", "yolov3")
-                print(result)
+                print("Starting test load ....")
+                start_time = time.perf_counter()
+                try:
 
-            print("Starting test load ....")
-            start_time = time.time()
-            try:
+                    subprocess.run(['node', 'req_gen.js', str(rps), str(batch)],
+                                   check=True, capture_output=True, text=True)
 
-                subprocess.run(['node', 'req_gen.js', str(rps)],
-                               check=True, capture_output=True, text=True)
+                except subprocess.CalledProcessError as e:
+                    print(e.stderr)
 
-            except subprocess.CalledProcessError as e:
-                print(e.stderr)
+                duration = int(time.perf_counter() - start_time)
+                print("Load test finished in {} s.".format(duration))
 
-            print("Load test finished .")
-            duration = int(time.time() - start_time)
-            yolo_api_stats = get_yolo_api_stats(window=duration)
-            pod_stats = get_pod_stats(pod_id=pod_id, window=duration)
-            print(pod_stats)
-            stats_file.write("{} {} {} {} {} {} {}\n".format(
-                rps, cpu,
-                (yolo_api_stats["request_rate"] / duration ),
-                yolo_api_stats["request_latency"],
-                pod_stats["cpu_usage"],
-                " ".join(map(str, pod_stats["per_cpu_usage"])),
-                pod_stats["memory_usage"]
-            ))
+                yolo_api_stats = get_yolo_api_stats(window=duration)
+                pod_stats = get_pod_stats(pod_id=pod_id, window=duration)
 
-            stats_file.close()
+                dropped_req = rps * 100 - yolo_api_stats["total_requests"]
+
+                stats_file.write("{} {} {} {} {} {} {} {} {}\n".format(
+                    rps, 
+                    cpu,
+                    batch,
+                    yolo_api_stats["request_rate"],
+                    dropped_req,
+                    yolo_api_stats["request_latency"],
+                    pod_stats["cpu_usage"],
+                    " ".join(map(str, pod_stats["per_cpu_usage"])),
+                    pod_stats["memory_usage"]
+                ))
+
+                stats_file.close()
 
 
 if __name__ == '__main__':

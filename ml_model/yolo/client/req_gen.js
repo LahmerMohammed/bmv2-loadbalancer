@@ -4,22 +4,25 @@ const FormData = require("form-data");
 const loadtest = require("loadtest");
 
 const requestsPerSecond = process.argv[2];
+const batchSize = process.argv[3];
+const serice_ip = ""
 
 
 // Define the custom request generator function
 function requestGenerator(params, options, client, callback) {
   // Read the image file and convert it to a buffer
-  const imagePath = "images/cars.jpg";
-  const imageBuffer = fs.readFileSync(imagePath);
+  const imagePaths = Array.from({ length: batchSize }, () => "images/cars.jpg");
 
   // Create a new FormData instance
   const formData = new FormData();
 
-  // Append the image field to the form data
-  formData.append("image", imageBuffer, {
-    filename: "cars.jpg",
-    contentType: "image/jpeg",
-  });
+  for (const imagePath of imagePaths) {
+    const imageBuffer = fs.readFileSync(imagePath);
+    formData.append("images", imageBuffer, {
+      filename: imagePath,
+      contentType: "image/jpeg",
+    });
+  }
 
   // Set the necessary headers for the API request
   const headers = formData.getHeaders();
@@ -52,11 +55,11 @@ function requestGenerator(params, options, client, callback) {
 
 // Define the load testing options
 const options = {
-  url: "http://128.110.217.143:30356/predict?model=yolov3",
+  url: `http://${serice_ip}/predict?model=yolov3`,
   concurrency: 1,
   requestGenerator: requestGenerator,
   requestsPerSecond: requestsPerSecond,
-  maxSeconds: 30,
+  maxSeconds: 100,
 };
 
 /*
