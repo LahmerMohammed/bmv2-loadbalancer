@@ -10,11 +10,11 @@ import threading
 import time
 
 
-server_ip = "128.110.217.143"
+server_ip = "128.110.218.27"
 
 images = ['images/cars.jpg']
 
-yolo_service_endpoint = "http://{}:30356".format(server_ip)
+yolo_service_endpoint = "http://{}:31586".format(server_ip)
 
 POD_NAME = "yolo-v3"
 
@@ -54,7 +54,7 @@ def get_yolo_api_status():
     
 
 def get_pod_stats(pod_id: str, window: int):
-    url = f"http://128.110.217.143:10001/stats/{pod_id}?window={window}"
+    url = f"http://128.110.218.27:10001/stats/{pod_id}?window={window}"
 
     try:
         # Send a GET request to the server

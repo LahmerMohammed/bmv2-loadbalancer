@@ -5,7 +5,7 @@ const loadtest = require("loadtest");
 
 const requestsPerSecond = process.argv[2];
 const batchSize = process.argv[3];
-const serice_ip = ""
+const serice_ip = "128.110.218.27:31586"
 
 
 // Define the custom request generator function
