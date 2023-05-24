@@ -2,33 +2,28 @@ import sys
 
 sys.path.append('./utils')
 
-services = [
-    {
-        'id': 1,
+services = {
+    8000: {
         'name': 'tcp_server',
         'port': 8000,
         'servers': [
             {
-                'id': 1,
                 'ip': '10.198.0.2',
                 'connected_to_sw_port': 1,
             }
         ],
     },
-    {
-        'id': 2,
+    9000: {
         'name': 'yolo_model',
         'port': 9000,
         'servers': [
             {
-                'id': 1,
                 'ip': '10.198.0.2',
                 'connected_to_sw_port': 1,
             }   
         ]
     },
-
-]
+}
 
 
 BMV2_SWITCH = {

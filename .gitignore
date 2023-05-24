@@ -1202,3 +1202,9 @@ ml_model/yolo/client/node_modules/yaml/types/timestamp.js
 ml_model/yolo/datasets/dataset.txt
 ml_model/yolo/datasets/model_data_2.txt
 ml_model/yolo/datasets/model_stats_1.txt
+ml_model/yolo/api/model/classes.txt
+ml_model/yolo/api/model/yolov3_classes.txt
+ml_model/yolo/api/model/yolov3-tiny.cfg
+ml_model/yolo/api/model/yolov3-tiny.weights
+ml_model/yolo/api/model/yolov3.cfg
+ml_model/yolo/api/model/yolov3.weights

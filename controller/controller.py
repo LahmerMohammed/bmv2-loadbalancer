@@ -12,6 +12,8 @@ from scapy.all import *
 class Controller:
     def __init__(self, p4i_file_path=BMV2_SWITCH['p4i_file_path'], bmv2_json_file_path=BMV2_SWITCH['json_file_path']) -> None:
 
+        self.load_balancer = RoundRobin()
+
         self.p4i_helper = helper.P4InfoHelper(p4i_file_path)
         
         try:
@@ -112,15 +114,20 @@ class Controller:
         self.bmv2_sw.WriteTableEntry(table_entry=table_entry)
 
     def receivePacketsFromDataplane(self):
+        """
+        - Create a thread for each received packet  
+        """
         print('[✅] Waiting to receive packets from dataplane ...')
         for stream_msg_response in self.bmv2_sw.stream_msg_resp:
+
             result = protobuf_to_dict(stream_msg_response)
             ether = Ether(result["packet"]["payload"])
             packet = ether.payload
             datagram = packet.payload
 
             # Here add load balancer to choose a server from available servers for that service
-            server = services[0]['servers'][0]
+            server = self.load_balancer.get_next_server(datagram.dport)
+
             
             snat_entry = {
                 'match': {
