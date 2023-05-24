@@ -43,7 +43,9 @@ class Controller:
             self.add_send_frame_table_entry(port=c_if["switch_port"],mac_addr=c_if["mac"])
 
         
-        self.add_service_table_entry(port=8000)
+        #Added services entries
+        for key, _ in services.items():
+            self.add_service_table_entry(port=key)
 
         print('[✅] Default entries added successfully ')
 
@@ -133,7 +135,7 @@ class Controller:
                 'match': {
                     'srcIpAddr': packet.src,
                     'srcTcpPort': datagram.sport,
-                    'dstTcpPort': datagram.dport,
+                    'dstTcpPort': server['port'],
                 },
                 'params': {
                     'dstIpAddr': server['ip'],
