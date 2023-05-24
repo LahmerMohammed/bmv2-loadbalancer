@@ -37,7 +37,7 @@ BMV2_SWITCH = {
     'cluster_interfaces': [{
         'switch_port': 1,
         'mac': '42:01:ac:14:00:08',
-        'private_ip': '172.20.0.8'
+        'private_ip': '10.198.0.13'
     }
     ],
     'gateway_interface': {
