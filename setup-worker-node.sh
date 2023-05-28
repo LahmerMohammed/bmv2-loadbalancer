@@ -51,4 +51,4 @@ sudo apt install socat conntrack ebtables ipset -y
 
 
 #docker run -d -p 5000:5000 --name local-registry registry
-#docker build -t lovalhost:5000/yolo-v3:v1 ./ml_model/yolo/api/ 
+#docker build -t localhost:5000/yolov3:v1 ./ml_model/yolo/api/ 

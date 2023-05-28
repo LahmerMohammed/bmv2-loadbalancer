@@ -3,23 +3,20 @@ import sys
 sys.path.append('./utils')
 
 services = {
-    9000: {
-        'name': 'tcp_server',
-        'port': 9000,
-        'servers': [
-            {
-                'ip': '10.198.0.11',
-                'connected_to_sw_port': 1,
-            }
-        ],
-    },
     8000: {
         'name': 'yolo_model',
         'servers': [
             {
                 'ip': '10.198.0.11',
                 'connected_to_sw_port': 1,
-                'port': '30946'
+                'port': '30946',
+                'pod_id': '2',
+            }, 
+            {
+                'ip': '10.198.0.11',
+                'connected_to_sw_port': 1,
+                'port': '30948',
+                'pod_id': '1',
             }   
         ]
     },
