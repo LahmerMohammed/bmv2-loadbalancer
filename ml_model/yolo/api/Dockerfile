@@ -15,7 +15,14 @@ FROM python:3.10
 
 WORKDIR /app
 
+
+COPY --from=node_builder /usr/local /usr/local
+
+# Set the working directory
+WORKDIR /app
+
 COPY --from=node_builder /app/node_modules /app/node_modules
+
 
 COPY requirements.txt .
 
@@ -30,6 +37,6 @@ RUN pip3 install -r requirements.txt \
     && wget https://github.com/pjreddie/darknet/raw/master/cfg/yolov3.cfg -O ${yolo_path}/yolov3.cfg \
     && wget https://github.com/arunponnusamy/object-detection-opencv/raw/master/yolov3.txt -O ${yolo_path}/yolov3.txt
 
-COPY . .
+COPY . /app
 
-CMD [ "node", "index.js" ]
+CMD [ "node", "/app/index.js" ]
