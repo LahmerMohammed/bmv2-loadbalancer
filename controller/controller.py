@@ -13,9 +13,11 @@ class Controller:
     def __init__(self, p4i_file_path=BMV2_SWITCH['p4i_file_path'], bmv2_json_file_path=BMV2_SWITCH['json_file_path']) -> None:
 
         self.load_balancer = RoundRobin()
-
+        self.port_map = {}
         self.p4i_helper = helper.P4InfoHelper(p4i_file_path)
-        
+        self.available_ports = list(range(2000, 65536))
+
+
         try:
             self.bmv2_sw = bmv2.Bmv2SwitchConnection(
                 address=BMV2_SWITCH['server_addr'],
@@ -115,6 +117,15 @@ class Controller:
 
         self.bmv2_sw.WriteTableEntry(table_entry=table_entry)
 
+    def add_port_mapping(self, ip, user_port):
+        if not self.available_ports or len(self.available_ports) == 0:
+            raise ValueError("No available ports to map.")
+
+        port = random.choice(self.available_ports)
+        self.port_map[port] = (ip, user_port)
+        self.available_ports.remove(port)
+        return port
+
     def receivePacketsFromDataplane(self):
         """
         - Create a thread for each received packet  
@@ -129,7 +140,10 @@ class Controller:
 
             # Here add load balancer to choose a server from available servers for that service
             server = self.load_balancer.get_next_server(datagram.dport)
+            
 
+            new_user_port = self.add_port_mapping(packet.src, datagram.sport)
+                
             
             snat_entry = {
                 'match': {
@@ -141,7 +155,7 @@ class Controller:
                     'dstIpAddr': server['ip'],
                     'dstMacAddr': BMV2_SWITCH['gateway_interface']['mac'],
                     'srcIpAddr': BMV2_SWITCH['cluster_interfaces'][0]['private_ip'],
-                    'srcPort': datagram.sport,  
+                    'srcPort': new_user_port,  
                     'egress_port': server['connected_to_sw_port']
                 }
             }
@@ -152,7 +166,7 @@ class Controller:
                 'match': { 'dstPort': datagram.sport },
                 'params': {
                     'dstIpAddr': packet.src,
-                    'dstPort': datagram.sport,
+                    'dstPort': new_user_port,
                     'dstMacAddr': BMV2_SWITCH['gateway_interface']['mac'],
                     'srcIpAddr': BMV2_SWITCH['users_interface']['public_ip'],
                     'egress_port': BMV2_SWITCH["users_interface"]["switch_port"]
