@@ -57,7 +57,7 @@ function requestGenerator(params, options, client, callback) {
 
 // Define the load testing options
 const options = {
-  url: `http://${serice_ip}/predict?model=yolov3`,
+  url: `http://${serice_ip}/predict`,
   concurrency: 1,
   requestGenerator: requestGenerator,
   requestsPerSecond: requestsPerSecond,
