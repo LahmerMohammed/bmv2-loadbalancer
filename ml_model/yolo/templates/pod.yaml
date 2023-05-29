@@ -12,12 +12,12 @@ spec:
     args: 
     - "/bin/bash"
     - "-c"
-    - "cd /app && node index.js && sleep infinity"
+    - "cd /app && chmod +x ./run.sh  && ./run.sh 1 1 600 && sleep infinity"
     ports:
     - containerPort: 8000
     resources:
       limits:
-        cpu: "1500m"
+        cpu: "3000m"
         memory: "3Gi"
               
     
