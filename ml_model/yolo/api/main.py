@@ -9,6 +9,14 @@ import time
 import asyncio
 from typing import List
 import datetime
+
+from redis import Redis
+redis = Redis(host='localhost')
+
+
+
+
+
 # List available models using Enum for convenience. This is useful when the options are pre-defined.
 class Model(str, Enum):
     yolov3tiny = "yolov3-tiny"
@@ -27,6 +35,12 @@ lock = asyncio.Lock()
 WINDOW = 10
 
 
+
+@app.on_event("startup")
+async def clear_redis():
+    redis.flushdb()
+
+
 @app.get("/")
 def home():
     return "Congratulations! Your API is working as expected. Now head over to http://localhost:8000/docs."
@@ -39,21 +53,14 @@ async def update_metrics(request, call_next):
         response = await call_next(request)
         return response
 
+    start_time = time.time()
+    response = await call_next(request)
+    total_time = time.time() - start_time
+    timestamp = time.time()
 
-    async with lock:
+    redis.zadd('request', {str(timestamp): total_time})
 
-        start_time = time.perf_counter()
-        response = await call_next(request)
-        total_time = time.perf_counter() - start_time
-
-        timestamp = time.perf_counter()
-        data["REQUEST_COUNTER"].append(timestamp)
-        data["REQUEST_LATENCY"].append({
-            'timestamp': timestamp,
-            'value': total_time
-        })
-
-        return response
+    return response
 
 @app.get('/stats')
 async def get_stats(window: int = WINDOW):
@@ -61,41 +68,40 @@ async def get_stats(window: int = WINDOW):
 
     if window is not None and window <= 0:
         return {"window": "Window must be a positive integer greather than zero !"}
-    
-    async with lock:
 
-        if len(data["REQUEST_COUNTER"]) == 0 or len(data["REQUEST_LATENCY"]) == 0:
-            raise HTTPException(
-                status_code=404, detail="No stats")
 
-        starting_from = time.perf_counter() - window
+    starting_from = time.perf_counter() - window
 
-        request_rate = 0
-        interval = 0
 
-        for req_ts in reversed(data["REQUEST_COUNTER"]): 
-            if req_ts < starting_from:
-                break
-            interval = req_ts
-            request_rate = request_rate + 1
+    requests = redis.zrangebyscore('request', '-inf', '+inf', withscores=True)
 
-        interval = data["REQUEST_COUNTER"][-1] - interval
 
-        request_latency = []
-        for req_l in reversed(data['REQUEST_LATENCY']): 
-            if req_l['timestamp'] < starting_from:
-                break
-            request_latency.append(req_l['value'])
-        total_requests = len(data["REQUEST_COUNTER"])
+    if len(requests) == 0:
+        raise HTTPException(
+            status_code=404, detail="No stats")
 
-        data["REQUEST_COUNTER"] = []
-        data["REQUEST_LATENCY"] = []
+    included_requests = []
+    for r in requests:
+        timestamp = float(r[0].decode())
+        if timestamp >= starting_from:
+            included_requests.append((r[0].decode(), r[1]))
 
-        return {
-            "request_rate": -1 if interval == 0 else  round(request_rate / interval, 2),
-            "request_latency": -1 if len(request_latency) == 0 else  round(sum(request_latency) / len(request_latency), 2),
-            "total_requests": total_requests
-        }
+    included_requests = sorted(included_requests, key=lambda x: x[0])
+
+
+    request_latency = [score for _, score in included_requests]
+    interval = float(included_requests[-1][0]) - float(included_requests[0][0])
+
+    print(interval)
+    print(request_latency)
+    request_rate = -1 if interval == 0 else len(included_requests) / interval
+
+
+    return {
+        "request_rate": round(request_rate, 2),
+        "request_latency": -1 if len(request_latency) == 0 else  round(sum(request_latency) / len(request_latency), 2),
+        "total_requests": len(included_requests)
+    }
 
 @app.get("/health")
 def health():

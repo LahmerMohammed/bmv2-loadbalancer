@@ -7,7 +7,7 @@ const requestsPerSecond = parseInt(process.argv[2]);
 const batchSize = parseInt(process.argv[3]);
 const duration = parseInt(process.argv[4]);
 
-const serice_ip = "localhost:31111"
+const serice_ip = "localhost:8000"
 
 
 // Define the custom request generator function
@@ -57,7 +57,7 @@ function requestGenerator(params, options, client, callback) {
 
 // Define the load testing options
 const options = {
-  url: `http://${serice_ip}/predict`,
+  url: `http://${serice_ip}/predict?model=yolov3`,
   concurrency: 1,
   requestGenerator: requestGenerator,
   requestsPerSecond: requestsPerSecond,
@@ -109,11 +109,7 @@ loadtest.loadTest(options, function (error, result) {
     console.error("Load testing error:", error);
   } else {
     console.log(result);
-    fs.writeFile("loadtest.log.txt", JSON.stringify(result), "utf8", (err) => {
-      if (err) {
-        console.error("An error occurred while writing to the file:", err);
-        return;
-      }
-    });
   }
+
+  return
 });

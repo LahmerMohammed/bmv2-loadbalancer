@@ -6,9 +6,13 @@ const fs = require('fs')
 const { Mutex } = require('async-mutex');
 const { exec } = require('child_process');
 const OS = require('os');
+const util = require('util');
 
-process.env.UV_THREADPOOL_SIZE = OS.cpus().length;
 
+process.env.UV_THREADPOOL_SIZE = 1
+console.log('Number of libuv thread pool threads:', process.env.UV_THREADPOOL_SIZE);
+
+const execAsync = util.promisify(exec);
 
 const storage = multer.diskStorage({ 
     destination: function(req, file, cb) {
@@ -27,12 +31,27 @@ const mutex = new Mutex();
 let REQUEST_STATS = []
 
 
+// Custom middleware to log incoming requests
+app.use((req, res, next) => {
+  console.log('Incoming Request:', 'Method:', req.method, 'URL:', req.url);
+  next();
+});
+
+
+
 /**
  * Perform object detection using YOLOv3
  */
-function performObjectDetection(imagePath) {
-  const output = exec(`python3 predict.py ${imagePath} yolov3  > /dev/null 2>&1 `);
-  return output
+async function performObjectDetection(imagePath) {
+
+  try {
+    const { stdout, stderr } = await execAsync(`python3 predict.py ${imagePath} yolov3  > /dev/null 2>&1 `);
+    console.log('Command output:', stdout);
+    console.error('Command error:', stderr);
+  
+  } catch (error) {
+    console.error('Command execution error:', error);
+  }
 }
 
 /**
@@ -58,6 +77,8 @@ function performObjectDetection(imagePath) {
 app.post("/predict", upload.array("images"), async (req, res) => {
   const start = process.hrtime();
 
+  res.json({ status: 'ok' });  
+  return
   res.on("finish", async () => {
     // Acquire the mutex lock
     const release = await mutex.acquire();  
@@ -157,6 +178,13 @@ app.get('/stats', async (req, res) => {
 
   
 });
+
+
+// Health endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
 
 
 const swaggerOptions = {
