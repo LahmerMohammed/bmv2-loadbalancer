@@ -36,9 +36,28 @@ var (
 	}
 )
 
+type StatusResponse struct {
+	Status string `json:"status"`
+}
+
 func healthHandler(w http.ResponseWriter, r *http.Request) {
-	// Respond with a simple health message
-	fmt.Fprintf(w, "Server is healthy")
+	// Create the StatusResponse struct instance
+	response := StatusResponse{
+		Status: "ok",
+	}
+
+	// Convert the struct to JSON
+	jsonResponse, err := json.Marshal(response)
+	if err != nil {
+		http.Error(w, "Error creating JSON response", http.StatusInternalServerError)
+		return
+	}
+
+	// Set the content type header to application/json
+	w.Header().Set("Content-Type", "application/json")
+
+	// Write the JSON response
+	w.Write(jsonResponse)
 }
 
 func statsHandler(w http.ResponseWriter, r *http.Request) {
