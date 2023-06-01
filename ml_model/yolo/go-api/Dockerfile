@@ -9,10 +9,10 @@ RUN apt-get update && apt-get install -y \
     libssl-dev
 
 # Download and install the TensorFlow C library
-RUN curl -L "https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow-cpu-linux-x86_64-2.6.0.tar.gz" | tar -C /usr/local -xz
+RUN wget https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow-cpu-linux-x86_64-2.11.0.tar.gz |  tar -C /usr/local -xzf
 
-# Set the library path
-ENV LD_LIBRARY_PATH=/usr/local/lib
+RUN ldconfig /usr/local/lib
+
 
 # Stage 2: Build the Go binary
 FROM golang:1.16.7 AS builder
