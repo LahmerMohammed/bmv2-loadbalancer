@@ -5,7 +5,7 @@ metadata:
 spec:
   hosts:
   - {name: master, address: 10.10.1.2, internalAddress: 10.10.1.2, privateKeyPath: "/root/.ssh/id_rsa"}
-  - {name: node2, address: 10.10.1.1, internalAddress: 10.10.1.1, privateKeyPath: "/root/.ssh/id_rsa"}
+  - {name: node1, address: 10.10.1.1, internalAddress: 10.10.1.1, privateKeyPath: "/root/.ssh/id_rsa"}
   roleGroups:
     etcd:
     - master

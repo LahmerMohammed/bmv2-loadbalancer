@@ -10,7 +10,7 @@ import threading
 import time
 
 
-server_ip = "128.110.218.27"
+server_ip = "128.110.217.123"
 
 images = ['images/cars.jpg']
 
@@ -71,15 +71,18 @@ kubernetes = KubernetesCLI()
 #cpu_values = ["3000m", "4000m", "6000m", "7000m", "9000m","10000m", "12000m", "14000m", "15000m"]
 #rps_values = [1, 2, 3, 4, 5, 6, 7, 8] * 10
 
-cpu_values = [f"{i}m" for i in range(3000, 15001, 500)]
-rps_values = list(range(1, 11))
-batch_size = list(range(1, 11))
+cpu_values = [f"{i}m" for i in range(15000, 2999, -500)]
+rps_values = list(range(1, 201, 2))
+batch_size = [1]
 
 def main():
     global cpu_values
     global rps_values
 
     for cpu in cpu_values:
+
+
+
         kubernetes.delete_pod(POD_NAME)
         print("Deleting pod {} ....".format(POD_NAME))
         while kubernetes.pod_exists(name=POD_NAME):
@@ -105,8 +108,9 @@ def main():
 
         except subprocess.CalledProcessError as e:
             print(e.stderr)
-        
+        ltc = 0
         for rps in rps_values:
+            
             for batch in batch_size:
                 print('Running scenario: cpu = {} -- rps = {} -- batch = {}'.format(cpu, rps, batch))
                 stats_file = open('stats.txt', 'a')
@@ -116,7 +120,7 @@ def main():
                 start_time = time.perf_counter()
                 try:
 
-                    subprocess.run(['node', 'req_gen.js', str(rps), str(batch), '100'],
+                    subprocess.run(['node', 'req_gen.js', str(rps), str(batch), '60'],
                                    check=True, capture_output=True, text=True)
 
                 except subprocess.CalledProcessError as e:
@@ -128,14 +132,16 @@ def main():
                 yolo_api_stats = get_yolo_api_stats(window=duration)
                 pod_stats = get_pod_stats(pod_id=pod_id, window=duration)
 
-                dropped_req = rps * 100 - yolo_api_stats["total_requests"]
+                dropped_req = rps * 60 - yolo_api_stats["total_requests"]
+                ltc = yolo_api_stats["request_latency"]
 
-                stats_file.write("{} {} {} {} {} {} {} {} {}\n".format(
+                if ltc > 1000:
+                    break
+
+                stats_file.write("{} {} {} {} {} {} {}\n".format(
                     rps, 
                     cpu,
-                    batch,
                     yolo_api_stats["request_rate"],
-                    dropped_req,
                     yolo_api_stats["request_latency"],
                     pod_stats["cpu_usage"],
                     " ".join(map(str, pod_stats["per_cpu_usage"])),
@@ -143,7 +149,8 @@ def main():
                 ))
 
                 stats_file.close()
-
+            if ltc > 1000:
+                break
 
 if __name__ == '__main__':
     main()
