@@ -2,24 +2,18 @@ const express = require("express");
 const multer = require("multer");
 const swaggerUi = require("swagger-ui-express");
 const swaggerJsdoc = require("swagger-jsdoc");
-const fs = require('fs')
 const { Mutex } = require('async-mutex');
-const { exec } = require('child_process');
-const OS = require('os');
-const util = require('util');
+const tf = require('@tensorflow/tfjs-node');
+const cocoSsd = require('@tensorflow-models/coco-ssd');
+const fs = require('fs');
 
-
-process.env.UV_THREADPOOL_SIZE = 1
-console.log('Number of libuv thread pool threads:', process.env.UV_THREADPOOL_SIZE);
-
-const execAsync = util.promisify(exec);
 
 const storage = multer.diskStorage({ 
     destination: function(req, file, cb) {
         cb(null, './assets')
     },
     filename: function(req, file, cb) {
-        cb(null, Date.now() + '-' + file.originalname)
+        cb(null, process.hrtime.bigint() + '-' + file.originalname)
     }
 });
 
@@ -30,6 +24,14 @@ const mutex = new Mutex();
 
 let REQUEST_STATS = []
 
+let model;
+
+async function loadModel() {
+  model = await cocoSsd.load();
+  console.log("Model loaded successfully .") 
+}
+
+loadModel();
 
 // Custom middleware to log incoming requests
 app.use((req, res, next) => {
@@ -38,21 +40,6 @@ app.use((req, res, next) => {
 });
 
 
-
-/**
- * Perform object detection using YOLOv3
- */
-async function performObjectDetection(imagePath) {
-
-  try {
-    const { stdout, stderr } = await execAsync(`python3 predict.py ${imagePath} yolov3  > /dev/null 2>&1 `);
-    console.log('Command output:', stdout);
-    console.error('Command error:', stderr);
-  
-  } catch (error) {
-    console.error('Command execution error:', error);
-  }
-}
 
 /**
  * @swagger
@@ -76,34 +63,57 @@ async function performObjectDetection(imagePath) {
  */
 app.post("/predict", upload.array("images"), async (req, res) => {
   const start = process.hrtime();
+  console.log(Math.floor(Date.now() / 1000))
 
-  res.json({ status: 'ok' });  
-  return
   res.on("finish", async () => {
+    console.log(Math.floor(Date.now() / 1000))
+
+    const end = process.hrtime(start);
+    const processingTimeInMs = parseFloat(Math.round(end[0] * 1000 + end[1] / 1000000).toFixed(1));
+
+    // Create a timestamp
+    const timestamp = Date.now();
+
     // Acquire the mutex lock
-    const release = await mutex.acquire();  
-
+    const release = await mutex.acquire();
     try {
-      const end = process.hrtime(start);
-      const processingTimeInMs = Math.round(end[0] * 1000 + end[1] / 1000000);
-
-      // Create a timestamp
-      const timestamp = Date.now();
-      REQUEST_STATS.push({timestamp: timestamp, processing_time: processingTimeInMs})
+      REQUEST_STATS.push({ timestamp: timestamp, processing_time: processingTimeInMs })
     } finally {
       release();
     }
+    
   });
 
-  const uploadedImage = req.files[0]
-
-  await performObjectDetection(uploadedImage.path)
+  const uploadedImage = req.files[0];
 
   if (!uploadedImage) {
     res.status(400).json({ error: 'No image file uploaded' });
     return;
   }
-  res.status(200).json({ info: 'Image file uploaded successfully' });
+
+  const imagePath = uploadedImage.path;
+
+  const imageBuffer = fs.readFileSync(imagePath);
+  const imageTensor = tf.node.decodeImage(imageBuffer)
+
+  const [height, width, channels] = imageTensor.shape;
+  const imageTensor3D = imageTensor.reshape([imageTensor.shape[0], imageTensor.shape[1], channels]);
+  
+  let predictions = {}
+
+  predictions = await model.detect(imageTensor3D);
+ 
+
+  // Convert the predictions to a JSON format
+  const jsonPredictions = JSON.stringify(predictions);
+
+  // Cleanup resources
+  tf.dispose([imageTensor, imageTensor3D, predictions]);
+
+  // Delete the image file
+  fs.unlinkSync(imagePath);
+
+  res.status(200).json({ predictions: jsonPredictions });
 });
 
 
@@ -138,7 +148,6 @@ app.get('/stats', async (req, res) => {
   let stats = [];
 
   const release = await mutex.acquire(); 
-
   try {
 
     if (REQUEST_STATS.length == 0)
@@ -153,6 +162,8 @@ app.get('/stats', async (req, res) => {
   }finally {
     release();
   }
+
+  console.log(stats)
 
   if (stats.length == 0) {
     res.status(200).json({ info: 'There is no stats.'})
