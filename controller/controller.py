@@ -11,7 +11,7 @@ from scapy.all import *
 from loadbalancer import RoundRobin
 import time
 import subprocess
-
+import random
 
 import socket
 
@@ -124,6 +124,7 @@ class Controller:
                 'dstMacAddr': entry["params"]["dstMacAddr"],
                 'srcIpAddr': entry["params"]["srcIpAddr"],
                 'egress_port': entry["params"]["egress_port"],
+                'srcPort': entry["params"]["srcPort"],
             }
         )
 
@@ -187,7 +188,7 @@ class Controller:
                 'match': {
                     'srcIpAddr': packet.src,
                     'srcTcpPort': datagram.sport,
-                    'dstTcpPort': 8000,
+                    'dstTcpPort': datagram.dport,
                 },
                 'params': {
                     'dstIpAddr': server['ip'],
@@ -208,7 +209,8 @@ class Controller:
                     'dstPort': datagram.sport,
                     'dstMacAddr': BMV2_SWITCH['gateway_interface']['mac'],
                     'srcIpAddr': BMV2_SWITCH['users_interface']['public_ip'],
-                    'egress_port': BMV2_SWITCH["users_interface"]["switch_port"]
+                    'egress_port': BMV2_SWITCH["users_interface"]["switch_port"],
+                    'srcPort': datagram.dport,
                 }
             }        
             self.add_reverse_snat_table_entry(reverse_snat_entry)

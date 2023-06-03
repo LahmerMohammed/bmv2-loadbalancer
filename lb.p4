@@ -169,12 +169,12 @@ control MyIngress(inout headers hdr,
     action no_action() {}
 
     action snat_a(ipv4Addr_t dstIpAddr, macAddr_t dstMacAddr,
-                  ipv4Addr_t srcIpAddr,bit<16> srcPort, bit<9> egress_port,
-		  bit<16> dstPort) {
+                  ipv4Addr_t srcIpAddr, bit<16> srcPort, 
+                  bit<9> egress_port, bit<16> dstPort) {
         hdr.ethernet.dstAddr = dstMacAddr; 
 
         hdr.tcp.srcPort = srcPort;
-	hdr.tcp.dstPort = dstPort;
+	    hdr.tcp.dstPort = dstPort;
 
         hdr.ipv4.srcAddr = srcIpAddr;
         hdr.ipv4.dstAddr = dstIpAddr;
@@ -184,7 +184,8 @@ control MyIngress(inout headers hdr,
     }
 
     action reverse_snat_a(ipv4Addr_t dstIpAddr, bit<16> dstPort, // user ip and port
-                          macAddr_t dstMacAddr, ipv4Addr_t srcIpAddr, bit<9> egress_port) {
+                          macAddr_t dstMacAddr, ipv4Addr_t srcIpAddr,
+                          bit<9> egress_port, bit<16> srcPort) {
 
         hdr.ethernet.dstAddr = dstMacAddr;
 
@@ -193,6 +194,7 @@ control MyIngress(inout headers hdr,
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
 
         hdr.tcp.dstPort = dstPort;
+        hdr.tcp.srcPort = srcPort;
 
         standard_metadata.egress_spec = egress_port;
     }
