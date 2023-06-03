@@ -8,6 +8,7 @@ from protobuf_to_dict import protobuf_to_dict
 import grpc
 from scapy.all import *
 
+from loadbalancer import RoundRobin
 
 class Controller:
     def __init__(self, p4i_file_path=BMV2_SWITCH['p4i_file_path'], bmv2_json_file_path=BMV2_SWITCH['json_file_path']) -> None:
@@ -44,7 +45,7 @@ class Controller:
         for c_if in BMV2_SWITCH["cluster_interfaces"]:
             self.add_send_frame_table_entry(port=c_if["switch_port"],mac_addr=c_if["mac"])
 
-        
+        services = get_services()
         #Added services entries
         for key, _ in services.items():
             self.add_service_table_entry(port=key)

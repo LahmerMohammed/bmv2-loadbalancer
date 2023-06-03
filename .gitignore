@@ -1339,3 +1339,12 @@ ml_model/yolo/api/model/yolov3-tiny.cfg
 ml_model/yolo/api/model/yolov3-tiny.weights
 ml_model/yolo/api/model/yolov3.cfg
 ml_model/yolo/api/model/yolov3.weights
+ml_model/yolo/model_stats_1.txt
+ml_model/yolo/client/loadtest.log.txt
+ml_model/yolo/client/no_model_statstxt
+ml_model/yolo/go-api/go-api
+ml_model/yolo/go-api/libtensorflow-cpu-linux-x86_64-2.6.0.tar.gz
+ml_model/yolo/go-api/libtensorflow-cpu-linux-x86_64-2.6.0.tar.gz.1
+ml_model/yolo/go-api/model/imagenet_comp_graph_label_strings.txt
+ml_model/yolo/go-api/model/LICENSE
+ml_model/yolo/go-api/model/tensorflow_inception_graph.pb
