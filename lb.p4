@@ -169,10 +169,12 @@ control MyIngress(inout headers hdr,
     action no_action() {}
 
     action snat_a(ipv4Addr_t dstIpAddr, macAddr_t dstMacAddr,
-                  ipv4Addr_t srcIpAddr,bit<16> srcPort, bit<9> egress_port) {
+                  ipv4Addr_t srcIpAddr,bit<16> srcPort, bit<9> egress_port,
+		  bit<16> dstPort) {
         hdr.ethernet.dstAddr = dstMacAddr; 
 
         hdr.tcp.srcPort = srcPort;
+	hdr.tcp.dstPort = dstPort;
 
         hdr.ipv4.srcAddr = srcIpAddr;
         hdr.ipv4.dstAddr = dstIpAddr;

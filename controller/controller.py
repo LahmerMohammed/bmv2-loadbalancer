@@ -9,6 +9,27 @@ import grpc
 from scapy.all import *
 
 from loadbalancer import RoundRobin
+import time
+import subprocess
+
+
+import socket
+
+def is_port_in_use(port):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        try:
+            s.bind(('localhost', port))
+        except OSError:
+            return True
+        return False
+
+def add_iptables_rule(port):
+    command = f"iptables -A INPUT -p tcp --dport {port} -j DROP"
+    subprocess.run(command, shell=True, check=True)
+
+def delete_iptables_rule(port):
+    command = f"iptables -D INPUT -p tcp --dport {port} -j DROP"
+    subprocess.run(command, shell=True, check=True)
 
 class Controller:
     def __init__(self, p4i_file_path=BMV2_SWITCH['p4i_file_path'], bmv2_json_file_path=BMV2_SWITCH['json_file_path']) -> None:
@@ -16,7 +37,7 @@ class Controller:
         self.load_balancer = RoundRobin()
         self.port_map = {}
         self.p4i_helper = helper.P4InfoHelper(p4i_file_path)
-        self.available_ports = list(range(2000, 65536))
+        self.available_ports = list(range(10000, 65536))
 
 
         try:
@@ -48,6 +69,7 @@ class Controller:
         services = get_services()
         #Added services entries
         for key, _ in services.items():
+            print(key)
             self.add_service_table_entry(port=key)
 
         print('[✅] Default entries added successfully ')
@@ -83,6 +105,7 @@ class Controller:
                 'srcIpAddr': entry["params"]["srcIpAddr"],
                 'srcPort': entry["params"]["srcPort"],
                 'egress_port': entry["params"]["egress_port"],
+                'dstPort': entry["params"]["dstPort"]
             }
         )
         self.bmv2_sw.WriteTableEntry(table_entry=table_entry)
@@ -104,6 +127,7 @@ class Controller:
             }
         )
 
+        
         self.bmv2_sw.WriteTableEntry(table_entry=table_entry)
 
     
@@ -123,9 +147,20 @@ class Controller:
             raise ValueError("No available ports to map.")
 
         port = random.choice(self.available_ports)
+        if is_port_in_use(port):
+            port = random.choice(self.available_ports)
+
         self.port_map[port] = (ip, user_port)
         self.available_ports.remove(port)
+        add_iptables_rule(port)
         return port
+    
+    def check_address_exists(self, ip_address, port):
+        for value in self.port_map.values():
+            if value[0] == ip_address and value[1] == port:
+                return True
+        return False
+
 
     def receivePacketsFromDataplane(self):
         """
@@ -138,36 +173,39 @@ class Controller:
             ether = Ether(result["packet"]["payload"])
             packet = ether.payload
             datagram = packet.payload
+            
+            if self.check_address_exists(packet.src, datagram.sport):
+                print(f"user with ip: {packet.src}:{datagram.sport} already exist")
+                continue
 
             # Here add load balancer to choose a server from available servers for that service
-            server = self.load_balancer.get_next_server(datagram.dport)
+            server = self.load_balancer.get_next_server(datagram.dport) 
             
-
             new_user_port = self.add_port_mapping(packet.src, datagram.sport)
-                
-            
+             
             snat_entry = {
                 'match': {
                     'srcIpAddr': packet.src,
                     'srcTcpPort': datagram.sport,
-                    'dstTcpPort': server['port'],
+                    'dstTcpPort': 8000,
                 },
                 'params': {
                     'dstIpAddr': server['ip'],
                     'dstMacAddr': BMV2_SWITCH['gateway_interface']['mac'],
                     'srcIpAddr': BMV2_SWITCH['cluster_interfaces'][0]['private_ip'],
                     'srcPort': new_user_port,  
-                    'egress_port': server['connected_to_sw_port']
+                    'egress_port': server['connected_to_sw_port'],
+                    'dstPort': server['port']
                 }
             }
             
             self.add_snat_table_entry(snat_entry)
             
             reverse_snat_entry = {
-                'match': { 'dstPort': datagram.sport },
+                'match': { 'dstPort': new_user_port },
                 'params': {
                     'dstIpAddr': packet.src,
-                    'dstPort': new_user_port,
+                    'dstPort': datagram.sport,
                     'dstMacAddr': BMV2_SWITCH['gateway_interface']['mac'],
                     'srcIpAddr': BMV2_SWITCH['users_interface']['public_ip'],
                     'egress_port': BMV2_SWITCH["users_interface"]["switch_port"]
@@ -175,7 +213,6 @@ class Controller:
             }        
             self.add_reverse_snat_table_entry(reverse_snat_entry)
             print("A new user have connected with ip: {} and port: {}".format(packet.src, datagram.sport))
-
 
     def shutdown(self):
         ShutdownAllSwitchConnections()

@@ -54,7 +54,10 @@ class RoundRobin(LoadBalancer):
 
         self.next_server[port] = (
             self.next_server[port] + 1) % len(services[port]["servers"])
-        return self.next_server[port]
+
+        print("Round robin: server_".format(self.next_server[port]))
+        
+        return services[port]["servers"][self.next_server[port]]
 
 
 class MachineLearningLoadBalancer(LoadBalancer):
@@ -108,7 +111,7 @@ class MachineLearningLoadBalancer(LoadBalancer):
         self.update_thread.join()
         
 
-
+"""
 load_balancer = MachineLearningLoadBalancer()
 
 load_balancer.start_update_thread()
@@ -119,3 +122,4 @@ for i in range(100):
 
 
 load_balancer.stop_update_thread()
+"""

@@ -38,11 +38,11 @@ def get_services():
 
         services[service_ports.port]['servers'].append({
             'id': node_port.metadata.uid,
-            'ip': '10.198.0.11',
+            'ip': '172.20.0.6',
             'connected_to_sw_port': 1,
             'port': service_ports.node_port
         })
-
+    return services
 
 
 BMV2_SWITCH = {
@@ -51,12 +51,12 @@ BMV2_SWITCH = {
     'users_interface': {
         'switch_port': 0,
         'mac': '42:01:0a:c6:00:0d',
-        'public_ip': '34.154.207.50',
+        'public_ip': '34.154.27.203',
     },
     'cluster_interfaces': [{
         'switch_port': 1,
         'mac': '42:01:ac:14:00:08',
-        'private_ip': '10.198.0.13'
+        'private_ip': '172.20.0.8'
     }
     ],
     'gateway_interface': {
