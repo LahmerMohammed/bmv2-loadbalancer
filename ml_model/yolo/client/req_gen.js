@@ -7,7 +7,7 @@ const requestsPerSecond = parseInt(process.argv[2]);
 const batchSize = parseInt(process.argv[3]);
 const duration = parseInt(process.argv[4]);
 
-const serice_ip = "34.154.27.203:8000"
+const serice_ip = "10.10.1.1:31111"
 
 
 // Define the custom request generator function

@@ -192,7 +192,7 @@ class Controller:
                 },
                 'params': {
                     'dstIpAddr': server['ip'],
-                    'dstMacAddr': BMV2_SWITCH['gateway_interface']['mac'],
+                    'dstMacAddr': BMV2_SWITCH['gateway_interface']['mac_eno1d1'],
                     'srcIpAddr': BMV2_SWITCH['cluster_interfaces'][0]['private_ip'],
                     'srcPort': new_user_port,  
                     'egress_port': server['connected_to_sw_port'],
@@ -207,7 +207,7 @@ class Controller:
                 'params': {
                     'dstIpAddr': packet.src,
                     'dstPort': datagram.sport,
-                    'dstMacAddr': BMV2_SWITCH['gateway_interface']['mac'],
+                    'dstMacAddr': BMV2_SWITCH['gateway_interface']['mac_eno1'],
                     'srcIpAddr': BMV2_SWITCH['users_interface']['public_ip'],
                     'egress_port': BMV2_SWITCH["users_interface"]["switch_port"],
                     'srcPort': datagram.dport,

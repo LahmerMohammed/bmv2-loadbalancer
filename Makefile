@@ -1,5 +1,5 @@
-OS_RELEASE=Debian
-VERSION_ID=11
+OS_RELEASE=xUbuntu
+VERSION_ID=20.04
 
 BUILD_DIR=build
 LOG_DIR=logs
@@ -28,8 +28,8 @@ compiled_json := $(DEFAULT_PROG:.p4=.json)
 
 run-bmv2: build
 	sudo simple_switch_grpc \
-		-i 0@ens4 \
-		-i 1@ens5 \
+		-i 0@eno1 \
+		-i 1@eno1d1 \
 		--no-p4 \
 		--device-id 0 \
     		--thrift-port 9090 \
