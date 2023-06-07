@@ -9,11 +9,24 @@ const duration = parseInt(process.argv[4]);
 
 const serice_ip = "10.10.1.1:31111"
 
+const images = ["images/cars.jpg", "images/zidane.jpg", "images/bus.jpg"]
+
+function createArrayOfSizeX(sizeX) {
+  let images_path = new Array(sizeX)
+
+  for(let i = 0; i <= sizeX; i++) {
+    const randomIndex = Math.floor(Math.random() * images.length)
+    images_path[i] = images[randomIndex]
+  }
+
+  return  images_path;
+}
+
 
 // Define the custom request generator function
 function requestGenerator(params, options, client, callback) {
   // Read the image file and convert it to a buffer
-  const imagePaths = Array.from({ length: batchSize }, () => "images/cars.jpg");
+  const imagePaths = createArrayOfSizeX(batchSize)
 
   // Create a new FormData instance
   const formData = new FormData();
@@ -47,7 +60,7 @@ function requestGenerator(params, options, client, callback) {
     });
 
     response.on("end", () => {
-      console.log("Response:", response.statusCode, data);
+      //console.log("Response:", response.statusCode, data);
     });
   });
 
@@ -57,11 +70,12 @@ function requestGenerator(params, options, client, callback) {
 
 // Define the load testing options
 const options = {
-  url: `http://${serice_ip}/predict?model=yolov3`,
+  url: `http://${serice_ip}/predict`,
   concurrency: 1,
   requestGenerator: requestGenerator,
   requestsPerSecond: requestsPerSecond,
   maxSeconds: duration,
+  agentKeepAlive: true,
 };
 
 /*

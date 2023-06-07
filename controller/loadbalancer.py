@@ -4,34 +4,51 @@ from abc import ABC, abstractmethod
 import threading
 import random
 from config import *
+from pycaret.regression import load_model, predict_model
+import pandas as pd
+
 
 
 WINDOW = 10
+model = load_model("./model/DecisionTreeRegressor")
+BEST_SERVER = {}
+COLUMNS = ['cpu_limit', 'req_rate', 'cpu', 'cpu0', 'cpu1', 'cpu2', 'cpu3', 'cpu4', 'cpu5', 'cpu6',
+           'cpu7', 'cpu8', 'cpu9', 'cpu10', 'cpu11', 'cpu12', 'cpu13', 'cpu14', 'cpu15', 'memory_usage']
 
 
 def get_yolo_api_stats(server_ip, port, window=20):
     url = 'http://{}:{}/stats?window={}'.format(server_ip, port, window)
     headers = {'accept': 'application/json'}
 
-    #return requests.get(url, headers=headers).json()
-    return 5
+    return requests.get(url, headers=headers).json()
+    
 
 
 def get_pod_stats(server_ip: str, pod_id: str, window: int):
     url = f"http://{server_ip}:10001/stats/{pod_id}?window={window}"
     try:
         # Send a GET request to the server
-        #response = requests.get(url)
-        #return response.json()
-        return 10
+        response = requests.get(url)
+        return response.json()
+        
     except requests.exceptions.RequestException as e:
         print(e)
         return None
 
 
-def predict_latency(api_stats, pod_stats):
-    return random.randint(1, 5)
+def predict_latency(api_stats, pod_stats, cpu_limit) -> float:
+    global model
+    X = [cpu_limit, api_stats["request_rate"], pod_stats["cpu_usage"]] + \
+        pod_stats["per_cpu_usage"] + [pod_stats["memory_usage"]]
 
+    df = pd.DataFrame(X)     
+    df.columns = COLUMNS 
+
+    predicted_latency = predict_model(model, data=df)["prediction_label"].values[0]
+
+    print(f"Latency: {predicted_latency}")
+
+    return predicted_latency
 
 
 class LoadBalancer(ABC):
@@ -55,28 +72,26 @@ class RoundRobin(LoadBalancer):
         self.next_server[port] = (
             self.next_server[port] + 1) % len(services[port]["servers"])
 
-        print("Round robin: server_".format(self.next_server[port]))
-        
         return services[port]["servers"][self.next_server[port]]
 
 
 class MachineLearningLoadBalancer(LoadBalancer):
     def __init__(self, update_interval=1):
-        self.best_server = {}
         self.update_interval = update_interval
         self.update_thread = threading.Thread(target=self.run_update)
 
-
     def get_next_server(self, port: int):
-        return self.best_server[port]
+        if port not in BEST_SERVER:
+            BEST_SERVER[port] = {}
+        return BEST_SERVER[port]
 
     def updated_ranking(self):
 
         services = get_services()
-        
+
         for port, service in services.items():
-            if port not in self.best_server:
-                self.best_server[port] = {}
+            if port not in BEST_SERVER:
+                BEST_SERVER[port] = {}
 
             servers_latency = []
 
@@ -84,20 +99,21 @@ class MachineLearningLoadBalancer(LoadBalancer):
                 yolo_api_stats = get_yolo_api_stats(
                     server_ip=server["ip"], window=WINDOW,
                     port=server["port"]
-                    )
+                )
 
                 pod_stats = get_pod_stats(
-                    server_ip=server["port"], 
+                    server_ip=server["port"],
                     pod_id=server["pod_id"], window=WINDOW)
-                
 
-                predicted_latency = predict_latency(yolo_api_stats, pod_stats)
+                predicted_latency = predict_latency(
+                    yolo_api_stats, pod_stats, cpu_limit=3)
                 servers_latency.append((predicted_latency, server))
 
             # Choose the server with the minimum predicted latency
-            best_latency, best_server = min(servers_latency, key=lambda x: x[0])
+            best_latency, best_server = min(
+                servers_latency, key=lambda x: x[0])
 
-            self.best_server[port] = best_server
+            BEST_SERVER[port] = best_server
 
     def run_update(self):
         while True:
@@ -109,7 +125,8 @@ class MachineLearningLoadBalancer(LoadBalancer):
 
     def stop_update_thread(self):
         self.update_thread.join()
-        
+
+
 
 """
 load_balancer = MachineLearningLoadBalancer()
@@ -119,7 +136,6 @@ load_balancer.start_update_thread()
 for i in range(100):
     time.sleep(1)
     print(load_balancer.get_next_server(8000))
-
 
 load_balancer.stop_update_thread()
 """

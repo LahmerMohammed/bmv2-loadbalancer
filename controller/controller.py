@@ -8,7 +8,7 @@ from protobuf_to_dict import protobuf_to_dict
 import grpc
 from scapy.all import *
 
-from loadbalancer import RoundRobin
+from loadbalancer import MachineLearningLoadBalancer
 import time
 import subprocess
 import random
@@ -34,7 +34,8 @@ def delete_iptables_rule(port):
 class Controller:
     def __init__(self, p4i_file_path=BMV2_SWITCH['p4i_file_path'], bmv2_json_file_path=BMV2_SWITCH['json_file_path']) -> None:
 
-        self.load_balancer = RoundRobin()
+        self.load_balancer = MachineLearningLoadBalancer()
+        self.load_balancer.start_update_thread()
         self.port_map = {}
         self.p4i_helper = helper.P4InfoHelper(p4i_file_path)
         self.available_ports = list(range(10000, 65536))
@@ -217,4 +218,5 @@ class Controller:
             print("A new user have connected with ip: {} and port: {}".format(packet.src, datagram.sport))
 
     def shutdown(self):
-        ShutdownAllSwitchConnections()
+        self.load_balancer.stop_update_thread()
+        self.bmv2_sw.shutdown()

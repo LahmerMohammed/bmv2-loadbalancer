@@ -1348,3 +1348,7 @@ ml_model/yolo/go-api/libtensorflow-cpu-linux-x86_64-2.6.0.tar.gz.1
 ml_model/yolo/go-api/model/imagenet_comp_graph_label_strings.txt
 ml_model/yolo/go-api/model/LICENSE
 ml_model/yolo/go-api/model/tensorflow_inception_graph.pb
+controller/model/DecisionTreeRegressor(random_state=7652).pkl
+controller/model/ExtraTreesRegressor(n_jobs=-1, random_state=7652).pkl
+controller/model/GradientBoostingRegressor(random_state=7652).pkl
+controller/model/LGBMRegressor(random_state=7652).pkl
