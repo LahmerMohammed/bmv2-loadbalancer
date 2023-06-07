@@ -15,6 +15,8 @@ import (
 	"sync"
 	"time"
 
+	"strings"
+
 	tf "github.com/wamuir/graft/tensorflow" //changed to graft
 	"github.com/wamuir/graft/tensorflow/op" //changed to graft
 )
@@ -27,13 +29,16 @@ type StatsResponse struct {
 }
 
 var (
-	graph     *tf.Graph
-	session   *tf.Session
-	dataMutex sync.Mutex
-	data      []struct {
+	graph   *tf.Graph
+	session *tf.Session
+	data    []struct {
 		Timestamp time.Time
 		Value     float64
 	}
+	dataMutex          sync.Mutex
+	throughput         []float64
+	last_req_timestamp time.Time
+	req_counter        float64
 )
 
 type StatusResponse struct {
@@ -61,6 +66,21 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func statsHandler(w http.ResponseWriter, r *http.Request) {
+
+	dataMutex.Lock()
+	sum := 0.0
+
+	if req_counter > 0 {
+		throughput = append(throughput, req_counter)
+		req_counter = 0
+	}
+	for _, num := range throughput {
+		sum += num
+	}
+	log.Printf("Array: %v", throughput)
+	log.Printf("Sum: %v", sum)
+	dataMutex.Unlock()
+
 	windowStr := r.URL.Query().Get("window")
 	window, err := strconv.Atoi(windowStr)
 	if err != nil {
@@ -127,18 +147,34 @@ func predictMiddleware(next http.Handler) http.Handler {
 		startTime := time.Now()
 		next.ServeHTTP(w, r)
 
-		processingTime := time.Since(startTime).Milliseconds()
-		timestamp := time.Now()
-		// Add the timestamp and processing time to the data array
 		dataMutex.Lock()
+		processingTime := time.Since(startTime).Milliseconds()
+		// Add the timestamp and processing time to the data array
 		data = append(data, struct {
 			Timestamp time.Time
 			Value     float64
 		}{
-			Timestamp: timestamp,
+			Timestamp: time.Now(),
 			Value:     float64(processingTime),
 		})
-		log.Printf("Request %v: %v ms", len(data), processingTime)
+		//log.Printf("Request %v: %v ms", len(data), processingTime)
+
+		if last_req_timestamp.IsZero() {
+			last_req_timestamp = time.Now()
+			req_counter = 0
+			throughput = make([]float64, 0)
+		} else {
+			timeDiff := time.Since(last_req_timestamp).Seconds()
+
+			if timeDiff >= 1 {
+				throughput = append(throughput, float64(req_counter))
+				req_counter = 0
+				last_req_timestamp = time.Now()
+			} else {
+				req_counter++
+			}
+			log.Printf("%v", throughput)
+		}
 		dataMutex.Unlock()
 
 	})
@@ -166,6 +202,9 @@ func predictHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	imagesByte := make([][]byte, len(files))
+	index := 0
+
 	// Iterate over the list of images
 	for _, fileHeader := range files {
 		// Open the file
@@ -174,26 +213,31 @@ func predictHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Failed to open image file", http.StatusInternalServerError)
 			return
 		}
-		defer file.Close()
+
 		imageByte, err := ioutil.ReadAll(file)
 		if err != nil {
 			http.Error(w, "Cannot read image file", http.StatusInternalServerError)
 			return
 		}
 
-		result := predict(imageByte)
+		file.Close()
 
-		response, err := json.Marshal(result)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		// Set the response content type to JSON
-		w.Header().Set("Content-Type", "application/json")
-
-		// Write the JSON response
-		w.Write(response)
+		imagesByte[index] = imageByte
+		index = index + 1
 	}
+
+	result := predict(imagesByte)
+
+	response, err := json.Marshal(result)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Set the response content type to JSON
+	w.Header().Set("Content-Type", "application/json")
+
+	// Write the JSON response
+	w.Write(response)
 
 }
 
@@ -213,6 +257,7 @@ func startServer() {
 func main() {
 	// Download model if not downloaded
 	// Load the serialized GraphDef from a file.
+
 	log.Printf("Loading the model ...")
 	modelfile, _, err := modelFiles("./model")
 	if err != nil {
@@ -236,14 +281,23 @@ func main() {
 	}
 	defer session.Close()
 
+	warmupData := make([][]byte, 10)
+	for i := 0; i < 10; i++ {
+		fileBytes, err := ioutil.ReadFile("images/cars.jpg")
+		if err != nil {
+			fmt.Println("Error reading file:", err)
+			return
+		}
+		warmupData[i] = fileBytes
+	}
+	predict(warmupData)
 	startServer()
 }
 
-func predict(image []byte) map[string]string {
-	tensor, err := makeTensorFromImage(image)
-	if err != nil {
-		log.Fatal(err)
-	}
+func predict(images [][]byte) []map[string]string {
+
+	tensor, _ := getBatchTensor(images)
+
 	output, err := session.Run(
 		map[tf.Output]*tf.Tensor{
 			graph.Operation("input").Output(0): tensor,
@@ -258,9 +312,14 @@ func predict(image []byte) map[string]string {
 	// output[0].Value() is a vector containing probabilities of
 	// labels for each image in the "batch". The batch size was 1.
 	// Find the most probably label index.
-	probabilities := output[0].Value().([][]float32)[0]
+	probabilities := output[0].Value().([][]float32)
 
-	return printBestLabel(probabilities)
+	results := make([]map[string]string, 0)
+
+	for _, p := range probabilities {
+		results = append(results, printBestLabel(p))
+	}
+	return results
 
 }
 
@@ -268,6 +327,7 @@ func printBestLabel(probabilities []float32) map[string]string {
 	_, labelsfile, err := modelFiles("./model")
 
 	bestIdx := 0
+
 	for i, p := range probabilities {
 		if p > probabilities[bestIdx] {
 			bestIdx = i
@@ -300,10 +360,12 @@ func printBestLabel(probabilities []float32) map[string]string {
 // Convert the image in filename to a Tensor suitable as input to the Inception model.
 func makeTensorFromImage(imageBytes []byte) (*tf.Tensor, error) {
 	// DecodeJpeg uses a scalar String-valued tensor as input.
+
 	tensorImg, err := tf.NewTensor(string(imageBytes))
 	if err != nil {
 		return nil, err
 	}
+
 	// Construct a graph to normalize the image
 	graphImg, input, output, err := constructGraphToNormalizeImage()
 	if err != nil {
@@ -418,4 +480,80 @@ func unzip(dir, zipfile string) error {
 		dst.Close()
 	}
 	return nil
+}
+
+func getBatchTensor(images [][]byte) (*tf.Tensor, error) {
+
+	batchOfImages := make([][][][]float32, len(images))
+
+	index := 0
+
+	for _, image := range images {
+		tensor, _ := makeTensorFromImage(image)
+
+		imageArr := tensor.Value().([][][][]float32)
+
+		batchOfImages[index] = imageArr[0]
+
+		index++
+	}
+
+	imagesTensor, err := tf.NewTensor(batchOfImages)
+	return imagesTensor, err
+
+}
+
+func printBestLabelsTopK(probabilities []float32, topK int) map[string]string {
+	_, labelsfile, err := modelFiles("./model")
+
+	bestIndexes := make([]int, topK)
+	for i := 0; i < topK; i++ {
+		bestIndexes[i] = i
+	}
+
+	for i := topK; i < len(probabilities); i++ {
+		minIdx := 0
+		for j := 1; j < topK; j++ {
+			if probabilities[bestIndexes[j]] < probabilities[bestIndexes[minIdx]] {
+				minIdx = j
+			}
+		}
+		if probabilities[i] > probabilities[bestIndexes[minIdx]] {
+			bestIndexes[minIdx] = i
+		}
+	}
+
+	file, err := os.Open(labelsfile)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	var labels []string
+	for scanner.Scan() {
+		labels = append(labels, scanner.Text())
+	}
+	if err := scanner.Err(); err != nil {
+		log.Printf("ERROR: failed to read %s: %v", labelsfile, err)
+	}
+
+	data := make(map[string]string)
+	for _, idx := range bestIndexes {
+		label := labels[idx]
+		proba := strconv.FormatFloat(float64(probabilities[idx])*100.0, 'f', 2, 64)
+		data[label] = proba
+	}
+
+	log.Printf("Data: %+v", data)
+
+	return data
+}
+
+func formatFloats(floats []float32) string {
+	strs := make([]string, len(floats))
+	for i, f := range floats {
+		strs[i] = strconv.FormatFloat(float64(f)*100.0, 'f', 2, 64)
+	}
+	return strings.Join(strs, ", ")
 }

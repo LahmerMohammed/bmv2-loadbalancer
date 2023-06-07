@@ -7,13 +7,27 @@ const requestsPerSecond = parseInt(process.argv[2]);
 const batchSize = parseInt(process.argv[3]);
 const duration = parseInt(process.argv[4]);
 
-const serice_ip = "34.154.27.203:8000"
+const serice_ip = "localhost:8000"
+let counter = 0
+
+const images = ["images/cars.jpg", "images/zidane.jpg", "images/bus.jpg"]
+
+function createArrayOfSizeX(sizeX) {
+  let images_path = new Array(sizeX)
+
+  for(let i = 0; i <= sizeX; i++) {
+    const randomIndex = Math.floor(Math.random() * images.length)
+    images_path[i] = images[randomIndex]
+  }
+
+  return  images_path;
+}
 
 
 // Define the custom request generator function
 function requestGenerator(params, options, client, callback) {
   // Read the image file and convert it to a buffer
-  const imagePaths = Array.from({ length: batchSize }, () => "images/cars.jpg");
+  const imagePaths = createArrayOfSizeX(batchSize)
 
   // Create a new FormData instance
   const formData = new FormData();
@@ -47,7 +61,8 @@ function requestGenerator(params, options, client, callback) {
     });
 
     response.on("end", () => {
-      console.log("Response:", response.statusCode, data);
+      counter++;
+      console.log("Response: ", counter);
     });
   });
 
@@ -61,7 +76,9 @@ const options = {
   concurrency: 1,
   requestGenerator: requestGenerator,
   requestsPerSecond: requestsPerSecond,
+  //maxRequests: requestsPerSecond*duration,
   maxSeconds: duration,
+  agentKeepAlive: true,
 };
 
 /*
