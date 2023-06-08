@@ -6,26 +6,30 @@ import random
 from config import *
 from pycaret.regression import load_model, predict_model
 import pandas as pd
-
+import json
 
 
 WINDOW = 10
-model = load_model("./model/DecisionTreeRegressor")
+model = load_model("./controller/model/DecisionTreeRegressor")
 BEST_SERVER = {}
 COLUMNS = ['cpu_limit', 'req_rate', 'cpu', 'cpu0', 'cpu1', 'cpu2', 'cpu3', 'cpu4', 'cpu5', 'cpu6',
            'cpu7', 'cpu8', 'cpu9', 'cpu10', 'cpu11', 'cpu12', 'cpu13', 'cpu14', 'cpu15', 'memory_usage']
 
 
-def get_yolo_api_stats(server_ip, port, window=20):
-    url = 'http://{}:{}/stats?window={}'.format(server_ip, port, window)
-    headers = {'accept': 'application/json'}
 
-    return requests.get(url, headers=headers).json()
-    
+
+def get_yolo_api_stats(server_ip, port, window=5):
+    try:
+        url = 'http://{}:{}/stats?window=30'.format(server_ip, port, window)
+        print(url)
+        headers = {'accept': 'application/json'}
+        return requests.get(url, headers=headers).json()
+    except requests.exceptions.RequestException:
+        return {}
 
 
 def get_pod_stats(server_ip: str, pod_id: str, window: int):
-    url = f"http://{server_ip}:10001/stats/{pod_id}?window={window}"
+    url = f"http://10.10.1.1:10001/stats/{pod_id}?window=30"
     try:
         # Send a GET request to the server
         response = requests.get(url)
@@ -33,20 +37,30 @@ def get_pod_stats(server_ip: str, pod_id: str, window: int):
         
     except requests.exceptions.RequestException as e:
         print(e)
-        return None
+        return {}
 
-
+counter = 0
 def predict_latency(api_stats, pod_stats, cpu_limit) -> float:
     global model
-    X = [cpu_limit, api_stats["request_rate"], pod_stats["cpu_usage"]] + \
-        pod_stats["per_cpu_usage"] + [pod_stats["memory_usage"]]
+    request_rate = 0.0 
+    if "request_rate" in api_stats:
+        request_rate = api_stats["request_rate"]
+    
+    cpu_usage = 0.0
+    per_cpu_usage = [0.0]*16
+    memory_usage = 0.0
+    if "cpu_usage" in pod_stats:
+        cpu_usage = pod_stats["cpu_usage"]
+        per_cpu_usage = pod_stats["per_cpu_usage"]
+        memory_usage = pod_stats["memory_usage"]
 
+
+    X =[[cpu_limit, request_rate, cpu_usage] + per_cpu_usage + [memory_usage] ]
     df = pd.DataFrame(X)     
     df.columns = COLUMNS 
-
+    
     predicted_latency = predict_model(model, data=df)["prediction_label"].values[0]
 
-    print(f"Latency: {predicted_latency}")
 
     return predicted_latency
 
@@ -81,6 +95,7 @@ class MachineLearningLoadBalancer(LoadBalancer):
         self.update_thread = threading.Thread(target=self.run_update)
 
     def get_next_server(self, port: int):
+
         if port not in BEST_SERVER:
             BEST_SERVER[port] = {}
         return BEST_SERVER[port]
@@ -106,14 +121,18 @@ class MachineLearningLoadBalancer(LoadBalancer):
                     pod_id=server["pod_id"], window=WINDOW)
 
                 predicted_latency = predict_latency(
-                    yolo_api_stats, pod_stats, cpu_limit=3)
-                servers_latency.append((predicted_latency, server))
+                    yolo_api_stats, pod_stats, cpu_limit=server["cpu_limit"])
+                servers_latency.append((predicted_latency, server)) 
 
-            # Choose the server with the minimum predicted latency
-            best_latency, best_server = min(
-                servers_latency, key=lambda x: x[0])
+            with open('filename.txt', 'a') as file:
+            # Write a float to the file
+                file.write(str(servers_latency) + ' ')
+                best_latency, best_server = min(
+                    servers_latency, key=lambda x: x[0])
 
-            BEST_SERVER[port] = best_server
+                BEST_SERVER[port] = best_server
+                file.write(" " + str(best_latency) + '\n')
+                file.write("************************\n")
 
     def run_update(self):
         while True:

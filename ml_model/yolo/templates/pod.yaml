@@ -2,9 +2,9 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: yolo-v3
+  name: yolo-v3-2
   labels:
-    name: yolo
+    name: yolo-2
 spec:
   containers:
   - name: yolo-container
@@ -17,8 +17,7 @@ spec:
     - containerPort: 8000
     resources:
       limits:
-        cpu: "3000m"
-        memory: "3Gi"
+        cpu: "7000m"
               
     
     

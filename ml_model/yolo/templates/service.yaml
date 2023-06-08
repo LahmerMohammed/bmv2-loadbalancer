@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: yolo-svc
+  name: yolo-svc-2
 spec:
   selector:
-    name: yolo
+    name: yolo-2
   ports:
     - name: http
       protocol: TCP

@@ -8,7 +8,7 @@ from protobuf_to_dict import protobuf_to_dict
 import grpc
 from scapy.all import *
 
-from loadbalancer import MachineLearningLoadBalancer
+from loadbalancer import MachineLearningLoadBalancer, RoundRobin
 import time
 import subprocess
 import random
@@ -24,21 +24,21 @@ def is_port_in_use(port):
         return False
 
 def add_iptables_rule(port):
-    command = f"iptables -A INPUT -p tcp --dport {port} -j DROP"
+    command = f"sudo iptables -A INPUT -p tcp --dport {port} -j DROP"
     subprocess.run(command, shell=True, check=True)
 
 def delete_iptables_rule(port):
-    command = f"iptables -D INPUT -p tcp --dport {port} -j DROP"
+    command = f"sudo iptables -D INPUT -p tcp --dport {port} -j DROP"
     subprocess.run(command, shell=True, check=True)
 
 class Controller:
     def __init__(self, p4i_file_path=BMV2_SWITCH['p4i_file_path'], bmv2_json_file_path=BMV2_SWITCH['json_file_path']) -> None:
 
         self.load_balancer = MachineLearningLoadBalancer()
-        self.load_balancer.start_update_thread()
+        #self.load_balancer = RoundRobin()
         self.port_map = {}
         self.p4i_helper = helper.P4InfoHelper(p4i_file_path)
-        self.available_ports = list(range(10000, 65536))
+        self.available_ports = list(range(2000, 65536))
 
 
         try:
@@ -52,6 +52,7 @@ class Controller:
 
             self.bmv2_sw.SetForwardingPipelineConfig(p4info=self.p4i_helper.p4info,
                                                      bmv2_json_file_path=bmv2_json_file_path)
+            self.load_balancer.start_update_thread()
 
             print(
                 "[✅] Installed loadbalancer P4 Program using SetForwardingPipelineConfig on the switch.")

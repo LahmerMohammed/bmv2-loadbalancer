@@ -1,7 +1,18 @@
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
+controller/venv/*
+
+
+controller/model/DecisionTreeRegressor.pkl
+controller/model/ExtraTreesRegressor.pkl
+controller/model/GradientBoostingRegressor.pkl
+controller/model/LGBMRegressor.pkl
+controller/model/RandomForestRegressor.pkl
+controller/model/logs.log
+
 
 # C extensions
 *.so
