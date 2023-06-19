@@ -10,7 +10,7 @@ import threading
 import time
 
 
-server_ip = "128.110.217.123"
+server_ip = "128.110.217.168"
 
 images = ['images/cars.jpg']
 
@@ -71,9 +71,9 @@ kubernetes = KubernetesCLI()
 #cpu_values = ["3000m", "4000m", "6000m", "7000m", "9000m","10000m", "12000m", "14000m", "15000m"]
 #rps_values = [1, 2, 3, 4, 5, 6, 7, 8] * 10
 
-cpu_values = [f"{i}m" for i in range(15000, 2999, -500)]
-rps_values = list(range(1, 201, 2))
-batch_size = [1]
+cpu_values = [f"{i}m" for i in range(15000, 2999, -1000)]
+rps_values = [5, 20, 50, 100]
+batch_size = [1, 5, 10, 15]
 
 def main():
     global cpu_values
@@ -105,10 +105,10 @@ def main():
             
             subprocess.run(['node', 'req_gen.js', '1', '1', '10'],
                                 check=True, capture_output=True, text=True)
-
+            get_yolo_api_stats(window=15)
         except subprocess.CalledProcessError as e:
             print(e.stderr)
-        ltc = 0
+
         for rps in rps_values:
             
             for batch in batch_size:
@@ -120,7 +120,7 @@ def main():
                 start_time = time.perf_counter()
                 try:
 
-                    subprocess.run(['node', 'req_gen.js', str(rps), str(batch), '60'],
+                    subprocess.run(['node', 'req_gen.js', str(rps), str(batch), '100'],
                                    check=True, capture_output=True, text=True)
 
                 except subprocess.CalledProcessError as e:
@@ -132,25 +132,18 @@ def main():
                 yolo_api_stats = get_yolo_api_stats(window=duration)
                 pod_stats = get_pod_stats(pod_id=pod_id, window=duration)
 
-                dropped_req = rps * 60 - yolo_api_stats["total_requests"]
-                ltc = yolo_api_stats["request_latency"]
-
-                if ltc > 1000:
-                    break
 
                 stats_file.write("{} {} {} {} {} {} {}\n".format(
                     rps, 
                     cpu,
-                    yolo_api_stats["request_rate"],
-                    yolo_api_stats["request_latency"],
+                    batch,
+                    yolo_api_stats["throughput"],
+                    yolo_api_stats["total_requests"],
                     pod_stats["cpu_usage"],
                     " ".join(map(str, pod_stats["per_cpu_usage"])),
-                    pod_stats["memory_usage"]
                 ))
 
                 stats_file.close()
-            if ltc > 1000:
-                break
 
 if __name__ == '__main__':
     main()

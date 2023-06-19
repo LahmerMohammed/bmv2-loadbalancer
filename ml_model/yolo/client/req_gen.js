@@ -7,7 +7,7 @@ const requestsPerSecond = parseInt(process.argv[2]);
 const batchSize = parseInt(process.argv[3]);
 const duration = parseInt(process.argv[4]);
 
-const serice_ip = "localhost:8000"
+const serice_ip = "128.110.217.168:31111"
 let counter = 0
 
 const images = ["images/cars.jpg", "images/zidane.jpg", "images/bus.jpg"]
